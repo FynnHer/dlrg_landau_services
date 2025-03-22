@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>DLRG Landau Services</title>
+    <title>DLRG Landau - Services</title>
     <script>
         function redirectBasedOnParams() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -12,7 +12,7 @@
                 window.location.href = 'password-reset.html' + window.location.search;
             } 
             // Check if this is a team invitation
-            else if (urlParams.has('membershipId') && urlParams.has('userId') && urlParams.has('secret') && urlParams.has('teamId')) {
+            else if (urlParams.has('membershipId') && urlParams.has('teamId')) {
                 window.location.href = 'team-invite.html' + window.location.search;
             }
             // Default landing page
