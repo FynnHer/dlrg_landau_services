@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DLRG Landau - Team Einladung</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 500px;
+        }
+        h1 {
+            color: #003370; /* DLRG blue */
+            margin-top: 0;
+        }
+        .message {
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .logo {
+            display: block;
+            margin: 0 auto 20px;
+            max-width: 200px;
+        }
+        button {
+            background-color: #003370; /* DLRG blue */
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #002255;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="https://www.dlrg.de/fileadmin/user_upload/DLRG-Logo.png" alt="DLRG Logo" class="logo">
+        <h1>Team Einladung</h1>
+        
+        <div id="loadingMessage">
+            <p>Ihre Team-Einladung wird verarbeitet...</p>
+        </div>
+        
+        <div id="successMessage" class="message success" style="display: none;">
+            <p>Sie wurden erfolgreich zum Team hinzugefügt!</p>
+            <p>Sie können jetzt die DLRG Landau App mit Ihren neuen Berechtigungen verwenden.</p>
+        </div>
+        
+        <div id="errorMessage" class="message error" style="display: none;">
+            <p id="errorText">Ein Fehler ist aufgetreten.</p>
+        </div>
+        
+        <button id="returnButton" onclick="returnToApp()" style="display: none;">Zurück zur App</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.1"></script>
+    <script>
+        // Parse URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const membershipId = urlParams.get('membershipId');
+        const userId = urlParams.get('userId');
+        const secret = urlParams.get('secret');
+        const teamId = urlParams.get('teamId');
+        
+        // Initialize Appwrite
+        const appwrite = new Appwrite();
+        appwrite
+            .setEndpoint('http://89.58.51.96/v1') // Replace with your Appwrite endpoint
+            .setProject('67dd9c47001a0503d8b6'); // Replace with your Appwrite project ID
+        
+        // Function to process team invitation
+        function processTeamInvitation() {
+            if (!membershipId || !userId || !secret) {
+                showError('Ungültiger Einladungslink. Bitte fordern Sie eine neue Einladung an.');
+                return;
+            }
+            
+            appwrite.teams.updateMembershipStatus(teamId, membershipId, userId, secret)
+                .then(() => {
+                    document.getElementById('loadingMessage').style.display = 'none';
+                    document.getElementById('successMessage').style.display = 'block';
+                    document.getElementById('returnButton').style.display = 'block';
+                })
+                .catch(error => {
+                    showError('Fehler bei der Verarbeitung der Einladung: ' + error.message);
+                });
+        }
+        
+        function showError(message) {
+            document.getElementById('loadingMessage').style.display = 'none';
+            document.getElementById('errorText').textContent = message;
+            document.getElementById('errorMessage').style.display = 'block';
+            document.getElementById('returnButton').style.display = 'block';
+        }
+        
+        function returnToApp() {
+            // Try to open the app with a custom URL scheme
+            window.location.href = 'dlrglandau://';
+            
+            // Fallback - redirect to website if app doesn't open
+            setTimeout(function() {
+                window.location.href = 'https://dlrg-landau.de';
+            }, 1000);
+        }
+        
+        // Process invitation when page loads
+        window.onload = processTeamInvitation;
+    </script>
+</body>
+</html>
