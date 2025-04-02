@@ -103,6 +103,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 <button id="consider-obstacles" class="btn btn-secondary">Hindernisse berücksichtigen</button>
                 <p class="option-description">Berücksichtigt Flüsse, Autobahnen und andere Barrieren bei der Berechnung</p>
             </div>
+            <div class="option-group">
+                <label>Geländemodus:</label>
+                <div class="terrain-mode-buttons">
+                    <button id="all-terrain" class="btn btn-secondary active">Querfeldein</button>
+                    <button id="roads-only" class="btn btn-secondary">Nur Straßen</button>
+                </div>
+                <p class="option-description">Querfeldein: kann über Felder gehen. Nur Straßen: bleibt auf Wegen</p>
+            </div>
         </div>
     `;
     
@@ -142,6 +150,27 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // Terrain mode selection
+    const allTerrainBtn = document.getElementById('all-terrain');
+    const roadsOnlyBtn = document.getElementById('roads-only');
+    let useRoadsOnly = false;
+    
+    allTerrainBtn.addEventListener('click', function() {
+        if (!this.classList.contains('active')) {
+            this.classList.add('active');
+            roadsOnlyBtn.classList.remove('active');
+            useRoadsOnly = false;
+        }
+    });
+    
+    roadsOnlyBtn.addEventListener('click', function() {
+        if (!this.classList.contains('active')) {
+            this.classList.add('active');
+            allTerrainBtn.classList.remove('active');
+            useRoadsOnly = true;
+        }
+    });
+    
     // Calculate radius button
     calculateBtn.addEventListener('click', async function() {
         // Validate inputs
@@ -159,49 +188,90 @@ document.addEventListener('DOMContentLoaded', function() {
         const speed = parseFloat(speedInput.value);
         const time = parseFloat(timeInput.value);
         
+        // Get the current transport mode
+        // Fix: Ensure we get the mode properly
+        let transportMode = activeTransportMode;
+        
+        console.log(`Active transport mode: ${transportMode}`);
+        
+        // Loading indicator
+        const oldButtonText = this.textContent;
+        this.textContent = 'Berechne...';
+        this.disabled = true;
+        
         try {
             if (obstaclesEnabled) {
-                // Show loading indicator
-                showLoadingIndicator(true);
+                console.log(`Calculating with obstacles: mode=${transportMode}, speed=${speed}, time=${time}, roadsOnly=${useRoadsOnly}`);
                 
-                // Get the active transport mode
-                const transportMode = activeTransportMode;
-                
-                // Generate search area with barriers
+                // Generate search area with obstacles
                 const searchArea = await isochroneService.generateSearchArea(
                     selectedPoint,
                     speed,
                     time,
-                    transportMode
+                    transportMode,
+                    useRoadsOnly
                 );
                 
-                showLoadingIndicator(false);
+                // Check if result is a fallback circle
+                const isFallback = searchArea.features && 
+                                  searchArea.features[0] && 
+                                  searchArea.features[0].properties && 
+                                  searchArea.features[0].properties.isFallback;
                 
-                if (!searchArea) {
-                    throw new Error('Fehler bei der Berechnung der Suchzone');
+                if (isFallback) {
+                    console.warn('Using fallback circle - API response could not be processed');
                 }
                 
-                // Add to map
+                // Random color
                 const color = getRandomColor();
-                const description = `${speed.toFixed(1)} km/h für ${time} Min. (mit Hindernissen)`;
                 
+                // Create description
+                const terrainModeText = useRoadsOnly ? 'Nur Straßen' : 'Querfeldein';
+                let description = `${speed.toFixed(1)} km/h für ${time} Min. (${terrainModeText})`;
+                
+                // Add area if available
+                if (searchArea.features[0].properties && searchArea.features[0].properties.area) {
+                    const area = searchArea.features[0].properties.area;
+                    description += ` - ${area.toFixed(2)} km²`;
+                }
+                
+                // Add fallback note if it's a fallback
+                if (isFallback) {
+                    description += ' [Fallback-Kreis]';
+                }
+                
+                // Add GeoJSON to map
                 const searchAreaLayer = L.geoJSON(searchArea, {
                     style: {
                         color: color,
                         weight: 3,
                         fillColor: color,
                         fillOpacity: 0.2,
-                        dashArray: '5, 5'
+                        dashArray: useRoadsOnly ? '5, 5' : ''  // Dashed line for "Roads Only"
                     }
                 }).addTo(map);
                 
+                // Add tooltip
                 searchAreaLayer.bindTooltip(description);
-                circles.push({ circle: searchAreaLayer, description });
+                
+                // Save circle
+                const circleObj = { 
+                    circle: searchAreaLayer, 
+                    description, 
+                    isAdvanced: true,
+                    terrainMode: terrainModeText,
+                    isFallback: isFallback
+                };
+                
+                circles.push(circleObj);
                 
                 // Add to UI list
-                addCircleToList({ circle: searchAreaLayer, description }, circles.length - 1);
+                addCircleToList(circleObj, circles.length - 1);
+                
+                // Fit map to show the entire area
+                map.fitBounds(searchAreaLayer.getBounds());
             } else {
-                // Use simple circle for basic search area
+                // Basic circle function
                 const radius = calculateDistance(speed, time);
                 const circleObj = addTravelCircle(radius, getRandomColor(), 
                     `${speed.toFixed(1)} km/h für ${time} Min. (${radius.toFixed(2)} km)`);
@@ -212,31 +282,42 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch (error) {
             console.error('Error calculating search area:', error);
-            showLoadingIndicator(false);
-            alert('Fehler beim Berechnen der Suchzone: ' + error.message);
+            alert(`Fehler bei der Berechnung: ${error.message}`);
             
-            // Fall back to simple circle
+            // Create simple circle as fallback
             const radius = calculateDistance(speed, time);
             const circleObj = addTravelCircle(radius, getRandomColor(), 
-                `${speed.toFixed(1)} km/h für ${time} Min. (${radius.toFixed(2)} km)`);
+                `${speed.toFixed(1)} km/h für ${time} Min. (${radius.toFixed(2)} km) [Fallback]`);
             
             if (circleObj) {
                 addCircleToList(circleObj, circles.length - 1);
             }
+        } finally {
+            // Always restore button state
+            this.textContent = oldButtonText;
+            this.disabled = false;
         }
     });
     
-    function showLoadingIndicator(show) {
-        let loadingEl = document.getElementById('loading-indicator');
+    // Function to show a loading spinner
+    function showLoadingSpinner(show) {
+        // Check if the spinner already exists
+        let spinner = document.getElementById('loading-spinner');
         
-        if (!loadingEl) {
-            loadingEl = document.createElement('div');
-            loadingEl.id = 'loading-indicator';
-            loadingEl.innerHTML = '<div class="spinner"></div><p>Berechne Suchbereich...</p>';
-            document.body.appendChild(loadingEl);
+        if (show) {
+            if (!spinner) {
+                // Create a new spinner
+                spinner = document.createElement('div');
+                spinner.id = 'loading-spinner';
+                spinner.className = 'loading-spinner';
+                spinner.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Berechne...';
+                document.body.appendChild(spinner);
+            }
+            spinner.style.display = 'flex';
+        } else if (spinner) {
+            // Hide the spinner
+            spinner.style.display = 'none';
         }
-        
-        loadingEl.style.display = show ? 'flex' : 'none';
     }
     
     // Clear all button
@@ -251,15 +332,27 @@ document.addEventListener('DOMContentLoaded', function() {
         const li = document.createElement('li');
         li.className = 'circle-item';
         
-        // Handle different circle types (basic circle vs. geoJSON)
-        let color = circleObj.circle.options.color;
-        if (!color && circleObj.circle.options.style) {
+        // Determine color
+        let color;
+        if (circleObj.circle.options && circleObj.circle.options.color) {
+            color = circleObj.circle.options.color;
+        } else if (circleObj.circle.options && circleObj.circle.options.style) {
             color = circleObj.circle.options.style.color;
+        } else {
+            color = '#3388ff'; // Default color
+        }
+        
+        // Show icon depending on terrain mode
+        let terrainIcon = '';
+        if (circleObj.isAdvanced) {
+            terrainIcon = circleObj.terrainMode === 'Nur Straßen' 
+                ? '<i class="fas fa-road" title="Nur Straßen"></i> ' 
+                : '<i class="fas fa-mountain" title="Querfeldein"></i> ';
         }
         
         li.innerHTML = `
-            <span style="color: ${color}">■</span> 
-            ${circleObj.description}
+            <span class="color-box" style="background-color: ${color}"></span>
+            ${terrainIcon}${circleObj.description}
             <button class="delete-btn" data-index="${index}">×</button>
         `;
         
@@ -280,4 +373,93 @@ document.addEventListener('DOMContentLoaded', function() {
             addCircleToList(circle, index);
         });
     }
+    
+    // Initialize the POI service
+    const poiService = new POIService();
+    
+    // Create the Show POIs button
+    const showPoisBtn = document.createElement('button');
+    showPoisBtn.id = 'show-pois-btn';
+    showPoisBtn.textContent = 'POIs im letzten Kreis anzeigen';
+    showPoisBtn.disabled = true; // Initially disabled
+    
+    // Create a container for POI status
+    const poiStatusContainer = document.createElement('div');
+    poiStatusContainer.className = 'poi-status';
+    
+    // Add button after the clear button
+    clearBtn.after(showPoisBtn);
+    showPoisBtn.after(poiStatusContainer);
+    
+    // Enable/disable POI button when circles change
+    function updatePoiButtonState() {
+        showPoisBtn.disabled = circles.length === 0;
+    }
+    
+    // Add event to show POIs
+    showPoisBtn.addEventListener('click', async function() {
+        if (circles.length === 0) {
+            alert('Bitte erstellen Sie zuerst einen Suchbereich.');
+            return;
+        }
+        
+        // Show loading state
+        const originalText = this.textContent;
+        this.textContent = 'Lade POIs...';
+        this.classList.add('loading');
+        this.disabled = true;
+        poiStatusContainer.textContent = 'Suche nach wichtigen Punkten...';
+        
+        try {
+            // Get the last created circle
+            const lastCircle = circles[circles.length - 1].circle;
+            
+            // Clear any existing POIs
+            poiService.clearPOIs(map);
+            
+            // Get POIs in the circle
+            const poisData = await poiService.getPOIsInCircle(lastCircle);
+            
+            // Display POIs on the map
+            poiService.displayPOIs(poisData, map);
+            
+            // Update status
+            if (poisData.features && poisData.features.length > 0) {
+                poiStatusContainer.textContent = `${poisData.features.length} POIs gefunden`;
+            } else {
+                poiStatusContainer.textContent = 'Keine POIs in diesem Bereich gefunden';
+            }
+        } catch (error) {
+            console.error('Error showing POIs:', error);
+            poiStatusContainer.textContent = 'Fehler beim Laden der POIs';
+            alert('Es gab einen Fehler beim Laden der POIs. Bitte versuchen Sie es später erneut.');
+        } finally {
+            // Restore button state
+            this.textContent = originalText;
+            this.classList.remove('loading');
+            this.disabled = false;
+        }
+    });
+    
+    // Update POI button when circles change
+    const originalAddCircleToList = addCircleToList;
+    addCircleToList = function(circleObj, index) {
+        originalAddCircleToList(circleObj, index);
+        updatePoiButtonState();
+    };
+    
+    const originalUpdateCirclesList = updateCirclesList;
+    updateCirclesList = function() {
+        originalUpdateCirclesList();
+        updatePoiButtonState();
+    };
+    
+    // Clear POIs when all circles are cleared
+    const originalClearAll = clearAll;
+    clearAll = function() {
+        originalClearAll();
+        poiService.clearPOIs(map);
+        updatePoiButtonState();
+        poiStatusContainer.textContent = '';
+    };
 });
