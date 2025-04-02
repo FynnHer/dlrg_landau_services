@@ -1,0 +1,69 @@
+-map/src/index.html -->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vermissten-Radius-Karte</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="map"></div>
+    
+    <div class="control-panel" id="control-panel">
+        <div class="panel-header">
+            <h3>Vermissten-Radius-Rechner</h3>
+            <button id="minimize-btn" class="minimize-btn"><i class="fa fa-chevron-up"></i></button>
+        </div>
+        
+        <div class="panel-content" id="panel-content">
+            <div class="input-group">
+                <label>Kartentyp:</label>
+                <div class="map-types">
+                    <button id="standard-map" class="map-type-btn active">Standard</button>
+                    <button id="satellite-map" class="map-type-btn">Satellit</button>
+                    <button id="streets-map" class="map-type-btn">Straßen</button>
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label for="speed">Geschwindigkeit (km/h):</label>
+                <input type="number" id="speed" min="1" value="5">
+            </div>
+            
+            <div class="input-group">
+                <label>Fortbewegungsart:</label>
+                <div class="transport-modes">
+                    <button id="walking" class="mode-btn active">Zu Fuß</button>
+                    <button id="biking" class="mode-btn">Fahrrad</button>
+                    <button id="driving" class="mode-btn">Auto</button>
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label for="time">Zeit (Minuten):</label>
+                <input type="number" id="time" min="1" value="30">
+            </div>
+            
+            <button id="calculate-btn">Radius berechnen</button>
+            <button id="clear-btn">Alles löschen</button>
+            
+            <div class="circles-list">
+                <h4>Gespeicherte Kreise</h4>
+                <ul id="circles-container"></ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/travelCircle.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
