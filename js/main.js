@@ -90,8 +90,60 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById(mode).classList.add('active');
     }
     
+    // Add collapsible advanced options section
+    const advancedOptionsSection = document.createElement('div');
+    advancedOptionsSection.className = 'collapsible-section';
+    advancedOptionsSection.innerHTML = `
+        <div class="section-header" id="advanced-options-header">
+            <h3>Erweiterte Optionen</h3>
+            <span class="toggle-icon">▼</span>
+        </div>
+        <div class="section-content" id="advanced-options-content">
+            <div class="option-group">
+                <button id="consider-obstacles" class="btn btn-secondary">Hindernisse berücksichtigen</button>
+                <p class="option-description">Berücksichtigt Flüsse, Autobahnen und andere Barrieren bei der Berechnung</p>
+            </div>
+        </div>
+    `;
+    
+    // Insert after transport modes
+    document.querySelector('.transport-modes').parentNode.after(advancedOptionsSection);
+    
+    // Toggle collapsible section
+    document.getElementById('advanced-options-header').addEventListener('click', function() {
+        const content = document.getElementById('advanced-options-content');
+        const icon = this.querySelector('.toggle-icon');
+        
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            icon.textContent = '▼';
+        } else {
+            content.style.display = 'none';
+            icon.textContent = '►';
+        }
+    });
+    
+    // Initialize the isochrone service
+    const isochroneService = new IsochroneService();
+    
+    // Consider obstacles button handler
+    const obstaclesBtn = document.getElementById('consider-obstacles');
+    let obstaclesEnabled = false;
+    
+    obstaclesBtn.addEventListener('click', function() {
+        obstaclesEnabled = !obstaclesEnabled;
+        
+        if (obstaclesEnabled) {
+            this.classList.add('btn-active');
+            this.textContent = 'Hindernisse werden berücksichtigt';
+        } else {
+            this.classList.remove('btn-active');
+            this.textContent = 'Hindernisse berücksichtigen';
+        }
+    });
+    
     // Calculate radius button
-    calculateBtn.addEventListener('click', function() {
+    calculateBtn.addEventListener('click', async function() {
         // Validate inputs
         if (!validateNumericInput(speedInput.value) || !validateNumericInput(timeInput.value)) {
             alert('Bitte geben Sie gültige Werte für Geschwindigkeit und Zeit ein.');
@@ -107,23 +159,85 @@ document.addEventListener('DOMContentLoaded', function() {
         const speed = parseFloat(speedInput.value);
         const time = parseFloat(timeInput.value);
         
-        // Calculate distance
-        const radius = calculateDistance(speed, time);
-        
-        // Generate a random color
-        const color = getRandomColor();
-        
-        // Create description
-        const description = `${speed} km/h für ${time} Min. (${radius.toFixed(2)} km)`;
-        
-        // Add circle to map
-        const circleObj = addTravelCircle(radius, color, description);
-        
-        if (circleObj) {
-            // Add to the list in UI
-            addCircleToList(circleObj, circles.length - 1);
+        try {
+            if (obstaclesEnabled) {
+                // Show loading indicator
+                showLoadingIndicator(true);
+                
+                // Get the active transport mode
+                const transportMode = activeTransportMode;
+                
+                // Generate search area with barriers
+                const searchArea = await isochroneService.generateSearchArea(
+                    selectedPoint,
+                    speed,
+                    time,
+                    transportMode
+                );
+                
+                showLoadingIndicator(false);
+                
+                if (!searchArea) {
+                    throw new Error('Fehler bei der Berechnung der Suchzone');
+                }
+                
+                // Add to map
+                const color = getRandomColor();
+                const description = `${speed.toFixed(1)} km/h für ${time} Min. (mit Hindernissen)`;
+                
+                const searchAreaLayer = L.geoJSON(searchArea, {
+                    style: {
+                        color: color,
+                        weight: 3,
+                        fillColor: color,
+                        fillOpacity: 0.2,
+                        dashArray: '5, 5'
+                    }
+                }).addTo(map);
+                
+                searchAreaLayer.bindTooltip(description);
+                circles.push({ circle: searchAreaLayer, description });
+                
+                // Add to UI list
+                addCircleToList({ circle: searchAreaLayer, description }, circles.length - 1);
+            } else {
+                // Use simple circle for basic search area
+                const radius = calculateDistance(speed, time);
+                const circleObj = addTravelCircle(radius, getRandomColor(), 
+                    `${speed.toFixed(1)} km/h für ${time} Min. (${radius.toFixed(2)} km)`);
+                
+                if (circleObj) {
+                    addCircleToList(circleObj, circles.length - 1);
+                }
+            }
+        } catch (error) {
+            console.error('Error calculating search area:', error);
+            showLoadingIndicator(false);
+            alert('Fehler beim Berechnen der Suchzone: ' + error.message);
+            
+            // Fall back to simple circle
+            const radius = calculateDistance(speed, time);
+            const circleObj = addTravelCircle(radius, getRandomColor(), 
+                `${speed.toFixed(1)} km/h für ${time} Min. (${radius.toFixed(2)} km)`);
+            
+            if (circleObj) {
+                addCircleToList(circleObj, circles.length - 1);
+            }
         }
     });
+    
+    function showLoadingIndicator(show) {
+        let loadingEl = document.getElementById('loading-indicator');
+        
+        if (!loadingEl) {
+            loadingEl = document.createElement('div');
+            loadingEl.id = 'loading-indicator';
+            loadingEl.innerHTML = '<div class="spinner"></div><p>Berechne Suchbereich...</p>';
+            document.body.appendChild(loadingEl);
+        }
+        
+        loadingEl.style.display = show ? 'flex' : 'none';
+    }
     
     // Clear all button
     clearBtn.addEventListener('click', function() {
@@ -136,8 +250,15 @@ document.addEventListener('DOMContentLoaded', function() {
     function addCircleToList(circleObj, index) {
         const li = document.createElement('li');
         li.className = 'circle-item';
+        
+        // Handle different circle types (basic circle vs. geoJSON)
+        let color = circleObj.circle.options.color;
+        if (!color && circleObj.circle.options.style) {
+            color = circleObj.circle.options.style.color;
+        }
+        
         li.innerHTML = `
-            <span style="color: ${circleObj.circle.options.color}">■</span> 
+            <span style="color: ${color}">■</span> 
             ${circleObj.description}
             <button class="delete-btn" data-index="${index}">×</button>
         `;
