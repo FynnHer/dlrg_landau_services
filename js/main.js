@@ -462,4 +462,50 @@ document.addEventListener('DOMContentLoaded', function() {
         updatePoiButtonState();
         poiStatusContainer.textContent = '';
     };
+        // KML Export functionality
+    const exportKmlBtn = document.getElementById('export-kml-btn');
+    const kmlExporter = new KMLExporter();
+    
+    exportKmlBtn.addEventListener('click', function() {
+        try {
+            if (!circles || circles.length === 0) {
+                alert('Keine Kreise zum Exportieren vorhanden. Bitte erstellen Sie zuerst mindestens einen Suchradius.');
+                return;
+            }
+            
+            if (!selectedPoint) {
+                alert('Kein Mittelpunkt verfügbar. Bitte wählen Sie einen Punkt auf der Karte aus.');
+                return;
+            }
+            
+            // Loading state
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Exportiere...';
+            this.disabled = true;
+            
+            // Generate filename with timestamp
+            const now = new Date();
+            const timestamp = now.toISOString().slice(0, 19).replace(/[:.]/g, '-');
+            const filename = `DLRG-Landau-Suchradius-${timestamp}.kml`;
+            
+            // Create and download KML
+            const kmlContent = kmlExporter.exportCirclesToKML(circles, selectedPoint);
+            kmlExporter.downloadKML(kmlContent, filename);
+            
+            // Show success message
+            setTimeout(() => {
+                alert(`KML-Datei "${filename}" wurde erfolgreich erstellt und heruntergeladen.`);
+            }, 500);
+            
+        } catch (error) {
+            console.error('KML Export Error:', error);
+            alert(`Fehler beim KML-Export: ${error.message}`);
+        } finally {
+            // Restore button state
+            setTimeout(() => {
+                this.innerHTML = originalText;
+                this.disabled = false;
+            }, 1000);
+        }
+    });
 });
