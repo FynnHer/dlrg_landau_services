@@ -505,3 +505,28 @@ body, html {
     margin-top: 5px;
     text-align: center;
 }
+.export-btn {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: #FF9800;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.export-btn:hover {
+    background: #F57C00;
+}
+
+.export-btn:disabled {
+    background: #CCCCCC;
+    cursor: not-allowed;
+}
+
+.export-btn i {
+    margin-right: 5px;
+}
