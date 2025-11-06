@@ -613,7 +613,7 @@ body, html {
         <div id="map"></div>
         
         <!-- Fullscreen Button -->
-        <button id="fullscreen-btn" title="Vollbildmodus">
+        <button id="fullscreen-btn" title="Vollbildmodus" aria-label="Vollbildmodus umschalten">
             <i class="fa fa-expand"></i>
         </button>
         
@@ -1344,11 +1344,29 @@ class WeatherService {
                         this.toggleLayer(layerId, checkbox.checked);
                     });
                     
+                    // Make layer item keyboard accessible
+                    layerItem.setAttribute('tabindex', '0');
+                    layerItem.setAttribute('role', 'checkbox');
+                    layerItem.setAttribute('aria-checked', layerData.visible ? 'true' : 'false');
+                    
                     // Also toggle on click of the container (except for delete button)
                     layerItem.addEventListener('click', (e) => {
                         if (e.target !== checkbox && !e.target.classList.contains('delete-btn')) {
                             checkbox.checked = !checkbox.checked;
                             this.toggleLayer(layerId, checkbox.checked);
+                            layerItem.setAttribute('aria-checked', checkbox.checked ? 'true' : 'false');
+                        }
+                    });
+                    
+                    // Keyboard navigation support
+                    layerItem.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            if (!e.target.classList.contains('delete-btn')) {
+                                checkbox.checked = !checkbox.checked;
+                                this.toggleLayer(layerId, checkbox.checked);
+                                layerItem.setAttribute('aria-checked', checkbox.checked ? 'true' : 'false');
+                            }
                         }
                     });
                     
