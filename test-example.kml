@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Beispiel KML Layer</name>
+    <description>Dies ist ein Beispiel für einen KML-Layer</description>
+    
+    <Style id="exampleStyle">
+      <LineStyle>
+        <color>ff0000ff</color>
+        <width>2</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>330000ff</color>
+      </PolyStyle>
+    </Style>
+    
+    <Placemark>
+      <name>Beispiel Punkt 1</name>
+      <description>Dies ist der erste Beispielpunkt</description>
+      <Point>
+        <coordinates>8.1172,49.1983,0</coordinates>
+      </Point>
+    </Placemark>
+    
+    <Placemark>
+      <name>Beispiel Polygon</name>
+      <description>Ein Beispielpolygon um Landau</description>
+      <styleUrl>#exampleStyle</styleUrl>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>
+              8.1,49.2,0
+              8.15,49.2,0
+              8.15,49.19,0
+              8.1,49.19,0
+              8.1,49.2,0
+            </coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+    
+  </Document>
+</kml>

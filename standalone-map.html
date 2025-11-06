@@ -1,0 +1,2791 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DLRG Landau - Interaktive Karte</title>
+    
+    <!-- External CDN libraries -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* ALL CSS INLINED HERE */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body, html {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+#map {
+    width: 100%;
+    height: 100vh;
+    z-index: 1;
+}
+
+.control-panel {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 300px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    max-height: 90vh;
+    overflow: hidden;
+    transition: height 0.3s ease;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+    cursor: pointer;
+}
+
+.panel-content {
+    padding: 15px;
+    overflow-y: auto;
+    max-height: calc(90vh - 50px);
+    transition: height 0.3s ease;
+}
+
+.minimize-btn {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: #555;
+    transition: transform 0.3s ease;
+}
+
+.control-panel.minimized .minimize-btn {
+    transform: rotate(180deg);
+}
+
+.control-panel.minimized .panel-content {
+    height: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.input-group {
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.transport-modes, .map-types {
+    display: flex;
+    gap: 5px;
+}
+
+.mode-btn, .map-type-btn {
+    flex: 1;
+    padding: 8px 0;
+    background: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.mode-btn.active, .map-type-btn.active {
+    background: #4CAF50;
+    color: white;
+    border-color: #4CAF50;
+}
+
+.map-type-btn.active {
+    background: #2196F3;
+    border-color: #2196F3;
+}
+
+#calculate-btn, #clear-btn {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#clear-btn {
+    background: #f44336;
+}
+
+.circles-list {
+    margin-top: 20px;
+    border-top: 1px solid #eee;
+    padding-top: 10px;
+}
+
+.circle-item {
+    background: #f9f9f9;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    border-left: 3px solid #2196F3;
+}
+
+.circle-item button {
+    float: right;
+    background: none;
+    border: none;
+    color: #f44336;
+    cursor: pointer;
+}
+
+/* Collapsible section */
+.collapsible-section {
+    margin: 15px 0;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.section-header {
+    padding: 12px 15px;
+    background-color: #f5f5f5;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.section-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.toggle-icon {
+    font-size: 12px;
+    transition: transform 0.3s;
+}
+
+.section-content {
+    padding: 15px;
+    border-top: 1px solid #ddd;
+}
+
+/* Option group */
+.option-group {
+    margin-bottom: 15px;
+}
+
+.option-group:last-child {
+    margin-bottom: 0;
+}
+
+.option-description {
+    margin-top: 8px;
+    font-size: 14px;
+    color: #666;
+}
+
+/* Checkbox styles */
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding-left: 28px;
+    cursor: pointer;
+    font-size: 14px;
+    user-select: none;
+    margin-bottom: 10px;
+}
+
+.checkbox-container input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.checkmark {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 18px;
+    width: 18px;
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+}
+
+.checkbox-container:hover input ~ .checkmark {
+    background-color: #ccc;
+}
+
+.checkbox-container input:checked ~ .checkmark {
+    background-color: #0078d7;
+    border-color: #0078d7;
+}
+
+.checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+}
+
+.checkbox-container input:checked ~ .checkmark:after {
+    display: block;
+    left: 6px;
+    top: 2px;
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/* Button styling */
+.btn-secondary {
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    color: #333;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+    font-size: 14px;
+    width: 100%;
+    text-align: center;
+}
+
+.btn-secondary:hover {
+    background-color: #e0e0e0;
+}
+
+/* Active button state */
+.btn-active {
+    background-color: #16a34a !important;
+    border-color: #15803d !important;
+    color: white !important;
+}
+
+/* Loading indicator */
+#loading-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    color: white;
+}
+
+.spinner {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #3498db;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Enhanced tooltip */
+.leaflet-tooltip {
+    white-space: normal !important;
+    max-width: 200px;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+/* Terrain mode buttons */
+.terrain-mode-buttons {
+    display: flex;
+    gap: 5px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+}
+
+.terrain-mode-buttons .btn {
+    flex: 1;
+}
+
+.terrain-mode-buttons .active {
+    background-color: #4CAF50;
+    color: white;
+    border-color: #4CAF50;
+}
+
+/* Lade-Spinner */
+.loading-spinner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.loading-spinner i {
+    margin-right: 10px;
+}
+
+/* Verschiedene Kreistypen */
+.color-box {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 5px;
+    border-radius: 2px;
+}
+
+/* Transport- und Terrainmodus-Buttons */
+.transport-mode, .btn-secondary {
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.transport-mode.active, .btn-secondary.active, .btn-active {
+    background-color: #4CAF50;
+    color: white;
+    border-color: #388E3C;
+}
+
+/* Option Beschreibungen */
+.option-description {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 3px;
+    margin-bottom: 8px;
+}
+
+/* POI markers */
+.poi-icon-container {
+    background: none;
+    border: none;
+}
+
+.poi-marker {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+}
+
+/* POI popup styles */
+.poi-popup {
+    max-width: 200px;
+}
+
+.poi-popup h4 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: #333;
+}
+
+.poi-popup p {
+    margin: 3px 0;
+    font-size: 12px;
+    color: #666;
+}
+
+/* POI Legend */
+.poi-legend {
+    background-color: white;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    padding: 0;
+    max-width: 250px;
+    margin-right: 10px !important;
+    margin-bottom: 40px !important;
+}
+
+.legend-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f5f5f5;
+    padding: 8px 12px;
+    border-bottom: 1px solid #ddd;
+    border-radius: 5px 5px 0 0;
+}
+
+.legend-header h4 {
+    margin: 0;
+    font-size: 14px;
+}
+
+.close-legend {
+    background: none;
+    border: none;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    color: #666;
+}
+
+.legend-content {
+    padding: 8px 12px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 12px;
+}
+
+.legend-item .color-box {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    margin-right: 8px;
+    display: inline-block;
+}
+
+.legend-item .category-name {
+    flex-grow: 1;
+}
+
+.legend-item .category-count {
+    color: #666;
+}
+
+/* POI Button */
+#show-pois-btn {
+    margin-top: 10px;
+    width: 100%;
+    background-color: #9c27b0;
+    color: white;
+}
+
+#show-pois-btn:disabled {
+    background-color: #e0e0e0;
+    color: #9e9e9e;
+    cursor: not-allowed;
+}
+
+#show-pois-btn.loading {
+    background-color: #7b1fa2;
+}
+
+.poi-status {
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+    text-align: center;
+}
+.export-btn {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: #FF9800;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.export-btn:hover {
+    background: #F57C00;
+}
+
+.export-btn:disabled {
+    background: #CCCCCC;
+    cursor: not-allowed;
+}
+
+.export-btn i {
+    margin-right: 5px;
+}
+
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <div class="control-panel" id="control-panel">
+        <div class="panel-header">
+            <h3>Vermissten-Radius-Rechner</h3>
+            <button id="minimize-btn" class="minimize-btn"><i class="fa fa-chevron-up"></i></button>
+        </div>
+        
+        <div class="panel-content" id="panel-content">
+            <div class="input-group">
+                <label>Kartentyp:</label>
+                <div class="map-types">
+                    <button id="standard-map" class="map-type-btn active">Standard</button>
+                    <button id="satellite-map" class="map-type-btn">Satellit</button>
+                    <button id="streets-map" class="map-type-btn">Straßen</button>
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label for="speed">Geschwindigkeit (km/h):</label>
+                <input type="number" id="speed" min="1" value="5">
+            </div>
+            
+            <div class="input-group">
+                <label>Fortbewegungsart:</label>
+                <div class="transport-modes">
+                    <button id="walking" class="transport-mode active" data-mode="walking">Zu Fuß</button>
+                    <button id="biking" class="transport-mode" data-mode="biking">Fahrrad</button>
+                    <button id="driving" class="transport-mode" data-mode="driving">Auto</button>
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label for="time">Zeit (Minuten):</label>
+                <input type="number" id="time" min="1" value="30">
+            </div>
+            
+            <button id="calculate-btn">Radius berechnen</button>
+            <button id="clear-btn">Alles löschen</button>
+            <button id="export-kml-btn" class="export-btn">
+                <i class="fa fa-download"></i> Als KML exportieren
+            </button>
+            
+            <div class="circles-list">
+                <h4>Gespeicherte Kreise</h4>
+                <ul id="circles-container"></ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- External CDN scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <script>
+        // =====================================================================
+        // CONFIGURATION SECTION
+        // =====================================================================
+        // Add your permanent KML layers here
+        // These layers will be available by default in the application
+        const PERMANENT_KML_LAYERS = [
+            // Example configuration:
+            // {
+            //     name: "Beispiel Layer 1",
+            //     url: "https://example.com/layer1.kml",  // URL to KML file
+            //     color: "#FF0000",  // Layer color
+            //     visible: true,  // Default visibility
+            //     description: "Beschreibung des Layers"
+            // },
+            // You can also embed KML content directly:
+            // {
+            //     name: "Embedded Layer",
+            //     kmlContent: `<?xml version="1.0" encoding="UTF-8"?>...`,
+            //     color: "#00FF00",
+            //     visible: false,
+            //     description: "Direkt eingebetteter KML-Layer"
+            // }
+        ];
+        
+        // API Configuration
+        const OPENROUTESERVICE_API_KEY = '5b3ce3597851110001cf624859e55459fe6d409fb3727a8b53110187';
+        
+        // Map Configuration
+        const DEFAULT_CENTER = [49.1983, 8.1172];  // Landau in der Pfalz
+        const DEFAULT_ZOOM = 13;
+        
+        // =====================================================================
+        // UTILITY FUNCTIONS (from utils.js)
+        // =====================================================================
+// Convert speed and time to distance in kilometers
+function calculateDistance(speedKmh, timeMinutes) {
+    // Distance = Speed × Time
+    // If speed is in km/h and time is in minutes, convert time to hours
+    const timeHours = timeMinutes / 60;
+    return speedKmh * timeHours;
+}
+
+// Get a random color for the circle
+function getRandomColor() {
+    const letters = '0123456789ABCDEF';
+    let color = '#';
+    for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+}
+
+// Default speeds for transportation modes in km/h
+const transportSpeeds = {
+    walking: 5,  // Zu Fuß
+    biking: 15,  // Fahrrad
+    driving: 60  // Auto
+};
+
+// Validate numeric input
+function validateNumericInput(value, min = 1) {
+    const num = parseFloat(value);
+    return !isNaN(num) && num >= min;
+}
+
+        // =====================================================================
+        // TRAVEL CIRCLE CLASS (from travelCircle.js)
+        // =====================================================================
+class TravelCircle {
+    constructor(center, radius, color, description) {
+        this.center = center;
+        this.radius = radius;
+        this.color = color;
+        this.description = description;
+        this.circleElement = null;
+    }
+
+    // Create the description for display
+    getDescription() {
+        return this.description;
+    }
+
+    // Get the radius in kilometers
+    getRadius() {
+        return this.radius;
+    }
+
+    // Get the circle color
+    getColor() {
+        return this.color;
+    }
+}
+
+        // =====================================================================
+        // TERRAIN ANALYZER (from terrain.js)
+        // =====================================================================
+class TerrainAnalyzer {
+    /**
+     * Adjust travel speed based on terrain
+     * @param {number} baseSpeed - Base speed in km/h
+     * @param {number} slope - Slope in degrees
+     * @returns {number} - Adjusted speed
+     */
+    static adjustSpeedForSlope(baseSpeed, slope) {
+        // Simple model: reduce speed by 5% for each degree of uphill slope
+        // For downhill, increase speed but max at 20% increase
+        if (slope > 0) {
+            // Uphill
+            return baseSpeed * Math.max(0.2, 1 - (slope * 0.05));
+        } else {
+            // Downhill
+            return baseSpeed * Math.min(1.2, 1 + (Math.abs(slope) * 0.02));
+        }
+    }
+    
+    /**
+     * Fetch terrain data along a path
+     * @param {Array} path - Array of [lat, lng] coordinates
+     * @returns {Promise} - Elevation data for path
+     */
+    static async getElevationProfile(path) {
+        // Using Open Elevation API or similar
+        const locations = path.map(point => `${point[0]},${point[1]}`).join('|');
+        const url = `https://api.open-elevation.com/api/v1/lookup?locations=${locations}`;
+        
+        try {
+            const response = await fetch(url);
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching elevation data:', error);
+            return null;
+        }
+    }
+}
+
+        // =====================================================================
+        // WEATHER SERVICE (from weather.js)
+        // =====================================================================
+class WeatherService {
+    constructor() {
+        // Using Open-Meteo API which is free and doesn't require an API key
+        this.apiUrl = 'https://api.open-meteo.com/v1/forecast';
+        this.cache = {};
+        this.cacheExpiry = 30 * 60 * 1000; // 30 minutes in milliseconds
+    }
+    
+    /**
+     * Get current weather for a location
+     * @param {L.LatLng} location - Location coordinates
+     * @returns {Promise<Object>} - Weather data
+     */
+    async getCurrentWeather(location) {
+        try {
+            const cacheKey = `weather-${location.lat.toFixed(4)}-${location.lng.toFixed(4)}`;
+            
+            // Check if we have cached data that's still valid
+            if (this.cache[cacheKey] && 
+                (Date.now() - this.cache[cacheKey].timestamp) < this.cacheExpiry) {
+                return this.cache[cacheKey].data;
+            }
+            
+            // Building the URL with parameters
+            const params = new URLSearchParams({
+                latitude: location.lat,
+                longitude: location.lng,
+                current: 'temperature_2m,precipitation,rain,showers,snowfall,wind_speed_10m,wind_direction_10m'
+            });
+            
+            const response = await fetch(`${this.apiUrl}?${params.toString()}`);
+            
+            if (!response.ok) {
+                throw new Error(`Weather API error: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // Cache the result with a timestamp
+            this.cache[cacheKey] = {
+                data: data,
+                timestamp: Date.now()
+            };
+            
+            return data;
+        } catch (error) {
+            console.error('Error fetching weather data:', error);
+            return null;
+        }
+    }
+    
+    /**
+     * Calculate speed multiplier based on weather conditions
+     * @param {Object} weatherData - Weather API response
+     * @param {string} travelMode - Mode of transportation
+     * @returns {number} - Speed multiplier (0.0-1.0)
+     */
+    getWeatherSpeedMultiplier(weatherData, travelMode) {
+        if (!weatherData || !weatherData.current) return 1.0;
+        
+        const current = weatherData.current;
+        let multiplier = 1.0;
+        
+        // Extract weather variables
+        const temperature = current.temperature_2m;
+        const windSpeed = current.wind_speed_10m;
+        const precipitation = current.precipitation || 0;
+        const snowfall = current.snowfall || 0;
+        
+        // Temperature effects
+        if (temperature < 0) {
+            // Cold weather slows people down
+            multiplier -= 0.1;
+            
+            // Extra penalty for extremely cold temperatures
+            if (temperature < -10) {
+                multiplier -= 0.1;
+            }
+        } else if (temperature > 30) {
+            // Hot weather also slows people down
+            multiplier -= 0.1;
+            
+            // Extra penalty for extremely hot temperatures
+            if (temperature > 35) {
+                multiplier -= 0.1;
+            }
+        }
+        
+        // Wind effects (stronger impact on cyclists)
+        if (windSpeed > 5) {
+            // Base wind penalty
+            const windPenalty = Math.min(0.3, (windSpeed - 5) * 0.03);
+            
+            if (travelMode === 'biking') {
+                // Cyclists are more affected by wind
+                multiplier -= windPenalty * 1.5;
+            } else {
+                multiplier -= windPenalty;
+            }
+        }
+        
+        // Precipitation effects
+        if (precipitation > 0) {
+            // Rain slows people down
+            multiplier -= Math.min(0.3, precipitation * 0.1);
+            
+            // Extra impact for cyclists and pedestrians
+            if (travelMode !== 'driving') {
+                multiplier -= Math.min(0.2, precipitation * 0.05);
+            }
+        }
+        
+        // Snow effects
+        if (snowfall > 0) {
+            // Snow has a major impact on mobility
+            multiplier -= Math.min(0.4, snowfall * 0.2);
+            
+            // Driving is especially affected by snow
+            if (travelMode === 'driving') {
+                multiplier -= Math.min(0.3, snowfall * 0.1);
+            }
+        }
+        
+        // Ensure multiplier doesn't go below 0.3 (30% of normal speed)
+        return Math.max(0.3, multiplier);
+    }
+    
+    /**
+     * Get readable weather description
+     * @param {Object} weatherData - Weather API response
+     * @returns {string} - Human-readable weather description
+     */
+    getWeatherDescription(weatherData) {
+        if (!weatherData || !weatherData.current) {
+            return 'Wetterdaten nicht verfügbar';
+        }
+        
+        const current = weatherData.current;
+        let description = `${current.temperature_2m}°C`;
+        
+        if (current.precipitation > 0) {
+            if (current.snowfall > 0) {
+                description += `, Schneefall (${current.snowfall} mm)`;
+            } else {
+                description += `, Niederschlag (${current.precipitation} mm)`;
+            }
+        }
+        
+        if (current.wind_speed_10m > 0) {
+            description += `, Wind: ${current.wind_speed_10m} km/h`;
+        }
+        
+        return description;
+    }
+}
+
+        // =====================================================================
+        // KML PARSER AND LAYER MANAGER (NEW FUNCTIONALITY)
+        // =====================================================================
+        class KMLParser {
+            /**
+             * Parse KML content and extract features
+             * @param {string} kmlContent - KML XML content
+             * @returns {Object} - Parsed KML data with features
+             */
+            static parseKML(kmlContent) {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(kmlContent, 'text/xml');
+                
+                // Check for parse errors
+                const parseError = xmlDoc.querySelector('parsererror');
+                if (parseError) {
+                    throw new Error('KML parsing error: ' + parseError.textContent);
+                }
+                
+                const features = [];
+                
+                // Extract Placemarks
+                const placemarks = xmlDoc.getElementsByTagName('Placemark');
+                
+                for (let i = 0; i < placemarks.length; i++) {
+                    const placemark = placemarks[i];
+                    const feature = this.parsePlacemark(placemark);
+                    if (feature) {
+                        features.push(feature);
+                    }
+                }
+                
+                return {
+                    type: 'FeatureCollection',
+                    features: features
+                };
+            }
+            
+            /**
+             * Parse a single Placemark element
+             */
+            static parsePlacemark(placemark) {
+                const name = this.getElementText(placemark, 'name') || 'Unnamed';
+                const description = this.getElementText(placemark, 'description') || '';
+                
+                // Try to find geometry
+                let geometry = null;
+                let coordinates = null;
+                
+                // Check for Point
+                const point = placemark.getElementsByTagName('Point')[0];
+                if (point) {
+                    const coordText = this.getElementText(point, 'coordinates');
+                    if (coordText) {
+                        const coords = this.parseCoordinates(coordText)[0];
+                        geometry = {
+                            type: 'Point',
+                            coordinates: coords
+                        };
+                    }
+                }
+                
+                // Check for LineString
+                const lineString = placemark.getElementsByTagName('LineString')[0];
+                if (lineString && !geometry) {
+                    const coordText = this.getElementText(lineString, 'coordinates');
+                    if (coordText) {
+                        const coords = this.parseCoordinates(coordText);
+                        geometry = {
+                            type: 'LineString',
+                            coordinates: coords
+                        };
+                    }
+                }
+                
+                // Check for Polygon
+                const polygon = placemark.getElementsByTagName('Polygon')[0];
+                if (polygon && !geometry) {
+                    const outerBoundary = polygon.getElementsByTagName('outerBoundaryIs')[0];
+                    if (outerBoundary) {
+                        const linearRing = outerBoundary.getElementsByTagName('LinearRing')[0];
+                        if (linearRing) {
+                            const coordText = this.getElementText(linearRing, 'coordinates');
+                            if (coordText) {
+                                const coords = this.parseCoordinates(coordText);
+                                geometry = {
+                                    type: 'Polygon',
+                                    coordinates: [coords]
+                                };
+                            }
+                        }
+                    }
+                }
+                
+                if (geometry) {
+                    return {
+                        type: 'Feature',
+                        properties: {
+                            name: name,
+                            description: description
+                        },
+                        geometry: geometry
+                    };
+                }
+                
+                return null;
+            }
+            
+            /**
+             * Get text content from an element
+             */
+            static getElementText(parent, tagName) {
+                const element = parent.getElementsByTagName(tagName)[0];
+                return element ? element.textContent.trim() : '';
+            }
+            
+            /**
+             * Parse coordinate string into array of [lng, lat, alt]
+             */
+            static parseCoordinates(coordText) {
+                const coords = [];
+                const lines = coordText.trim().split(/\s+/);
+                
+                for (const line of lines) {
+                    const parts = line.split(',').map(parseFloat);
+                    if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                        coords.push([parts[0], parts[1], parts[2] || 0]);
+                    }
+                }
+                
+                return coords;
+            }
+        }
+        
+        class KMLLayerManager {
+            constructor(map) {
+                this.map = map;
+                this.layers = new Map();  // layerId -> {layer, visible, color, name}
+                this.nextLayerId = 1;
+                this.initUI();
+            }
+            
+            /**
+             * Initialize KML layer UI
+             */
+            initUI() {
+                // Create KML section in control panel
+                const panelContent = document.getElementById('panel-content');
+                
+                const kmlSection = document.createElement('div');
+                kmlSection.className = 'collapsible-section';
+                kmlSection.innerHTML = `
+                    <div class="section-header" id="kml-section-header">
+                        <h3>KML Layers</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="section-content" id="kml-section-content">
+                        <div id="kml-layers-list" style="margin-bottom: 10px;"></div>
+                        <input type="file" id="kml-upload-input" accept=".kml,.kmz" style="display: none;">
+                        <button id="upload-kml-btn" class="btn-secondary" style="margin-bottom: 10px;">
+                            <i class="fa fa-upload"></i> KML hochladen
+                        </button>
+                        <button id="toggle-all-kml-btn" class="btn-secondary">
+                            <i class="fa fa-eye"></i> Alle ein/ausblenden
+                        </button>
+                    </div>
+                `;
+                
+                // Insert before circles list
+                const circlesList = document.querySelector('.circles-list');
+                circlesList.parentNode.insertBefore(kmlSection, circlesList);
+                
+                // Toggle section
+                document.getElementById('kml-section-header').addEventListener('click', function() {
+                    const content = document.getElementById('kml-section-content');
+                    const icon = this.querySelector('.toggle-icon');
+                    
+                    if (content.style.display === 'none') {
+                        content.style.display = 'block';
+                        icon.textContent = '▼';
+                    } else {
+                        content.style.display = 'none';
+                        icon.textContent = '►';
+                    }
+                });
+                
+                // Upload button handler
+                document.getElementById('upload-kml-btn').addEventListener('click', () => {
+                    document.getElementById('kml-upload-input').click();
+                });
+                
+                document.getElementById('kml-upload-input').addEventListener('change', (e) => {
+                    this.handleFileUpload(e.target.files[0]);
+                    e.target.value = '';  // Reset input
+                });
+                
+                // Toggle all button
+                document.getElementById('toggle-all-kml-btn').addEventListener('click', () => {
+                    this.toggleAllLayers();
+                });
+                
+                // Load permanent KML layers
+                this.loadPermanentLayers();
+            }
+            
+            /**
+             * Load permanent KML layers from configuration
+             */
+            async loadPermanentLayers() {
+                for (const layerConfig of PERMANENT_KML_LAYERS) {
+                    try {
+                        let kmlContent;
+                        
+                        if (layerConfig.kmlContent) {
+                            kmlContent = layerConfig.kmlContent;
+                        } else if (layerConfig.url) {
+                            const response = await fetch(layerConfig.url);
+                            kmlContent = await response.text();
+                        } else {
+                            continue;
+                        }
+                        
+                        this.addKMLLayer(
+                            kmlContent,
+                            layerConfig.name,
+                            layerConfig.color,
+                            layerConfig.visible !== false,
+                            true  // isPermanent
+                        );
+                    } catch (error) {
+                        console.error(`Error loading permanent layer "${layerConfig.name}":`, error);
+                    }
+                }
+            }
+            
+            /**
+             * Handle file upload
+             */
+            async handleFileUpload(file) {
+                if (!file) return;
+                
+                try {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const content = e.target.result;
+                        const fileName = file.name.replace(/\.kml$/, '');
+                        this.addKMLLayer(content, fileName, this.getRandomColor(), true, false);
+                    };
+                    reader.readAsText(file);
+                } catch (error) {
+                    console.error('Error reading KML file:', error);
+                    alert('Fehler beim Lesen der KML-Datei: ' + error.message);
+                }
+            }
+            
+            /**
+             * Add a KML layer
+             */
+            addKMLLayer(kmlContent, name, color, visible, isPermanent) {
+                try {
+                    const geoJson = KMLParser.parseKML(kmlContent);
+                    
+                    const layerId = this.nextLayerId++;
+                    
+                    // Create Leaflet layer
+                    const layer = L.geoJSON(geoJson, {
+                        style: {
+                            color: color,
+                            weight: 2,
+                            fillColor: color,
+                            fillOpacity: 0.2
+                        },
+                        pointToLayer: (feature, latlng) => {
+                            return L.circleMarker(latlng, {
+                                radius: 6,
+                                fillColor: color,
+                                color: '#fff',
+                                weight: 2,
+                                opacity: 1,
+                                fillOpacity: 0.8
+                            });
+                        },
+                        onEachFeature: (feature, layer) => {
+                            if (feature.properties && feature.properties.name) {
+                                let popupContent = `<b>${feature.properties.name}</b>`;
+                                if (feature.properties.description) {
+                                    popupContent += `<br>${feature.properties.description}`;
+                                }
+                                layer.bindPopup(popupContent);
+                            }
+                        }
+                    });
+                    
+                    if (visible) {
+                        layer.addTo(this.map);
+                    }
+                    
+                    this.layers.set(layerId, {
+                        layer: layer,
+                        visible: visible,
+                        color: color,
+                        name: name,
+                        isPermanent: isPermanent
+                    });
+                    
+                    this.updateLayersList();
+                    
+                    // Fit map to show all layers if this is the first layer
+                    if (this.layers.size === 1 && visible) {
+                        try {
+                            this.map.fitBounds(layer.getBounds());
+                        } catch (e) {
+                            // Ignore if bounds can't be calculated
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.error('Error adding KML layer:', error);
+                    alert('Fehler beim Laden des KML-Layers: ' + error.message);
+                }
+            }
+            
+            /**
+             * Update the layers list UI
+             */
+            updateLayersList() {
+                const listContainer = document.getElementById('kml-layers-list');
+                listContainer.innerHTML = '';
+                
+                this.layers.forEach((layerData, layerId) => {
+                    const layerItem = document.createElement('div');
+                    layerItem.className = 'checkbox-container';
+                    layerItem.innerHTML = `
+                        <input type="checkbox" id="kml-layer-${layerId}" ${layerData.visible ? 'checked' : ''}>
+                        <span class="checkmark"></span>
+                        <span class="color-box" style="background-color: ${layerData.color}; margin-left: 5px;"></span>
+                        <span style="margin-left: 5px;">${layerData.name}</span>
+                        ${!layerData.isPermanent ? `<button class="delete-btn" style="float: right; margin-left: 10px;" data-layer-id="${layerId}">×</button>` : ''}
+                    `;
+                    
+                    // Checkbox handler
+                    const checkbox = layerItem.querySelector('input[type="checkbox"]');
+                    checkbox.addEventListener('change', () => {
+                        this.toggleLayer(layerId, checkbox.checked);
+                    });
+                    
+                    // Delete button handler (for uploaded layers only)
+                    if (!layerData.isPermanent) {
+                        const deleteBtn = layerItem.querySelector('.delete-btn');
+                        deleteBtn.addEventListener('click', () => {
+                            this.removeLayer(layerId);
+                        });
+                    }
+                    
+                    listContainer.appendChild(layerItem);
+                });
+            }
+            
+            /**
+             * Toggle layer visibility
+             */
+            toggleLayer(layerId, visible) {
+                const layerData = this.layers.get(layerId);
+                if (!layerData) return;
+                
+                if (visible) {
+                    layerData.layer.addTo(this.map);
+                } else {
+                    this.map.removeLayer(layerData.layer);
+                }
+                
+                layerData.visible = visible;
+            }
+            
+            /**
+             * Remove a layer
+             */
+            removeLayer(layerId) {
+                const layerData = this.layers.get(layerId);
+                if (!layerData) return;
+                
+                this.map.removeLayer(layerData.layer);
+                this.layers.delete(layerId);
+                this.updateLayersList();
+            }
+            
+            /**
+             * Toggle all layers
+             */
+            toggleAllLayers() {
+                const anyVisible = Array.from(this.layers.values()).some(l => l.visible);
+                const newState = !anyVisible;
+                
+                this.layers.forEach((layerData, layerId) => {
+                    this.toggleLayer(layerId, newState);
+                });
+                
+                this.updateLayersList();
+            }
+            
+            /**
+             * Get a random color for new layers
+             */
+            getRandomColor() {
+                const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500', '#800080'];
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+            
+            /**
+             * Clear all uploaded (non-permanent) layers
+             */
+            clearUploadedLayers() {
+                const toRemove = [];
+                this.layers.forEach((layerData, layerId) => {
+                    if (!layerData.isPermanent) {
+                        toRemove.push(layerId);
+                    }
+                });
+                
+                toRemove.forEach(layerId => this.removeLayer(layerId));
+            }
+        }
+
+        // =====================================================================
+        // ISOCHRONES SERVICE (from isochrones.js)
+        // =====================================================================
+class IsochroneService {
+    constructor() {
+        // API endpoint - no trailing slash
+        this.apiUrl = 'https://api.openrouteservice.org/v2/isochrones/';
+        
+        // API key - use the exact same one from the example
+        this.apiKey = '5b3ce3597851110001cf624859e55459fe6d409fb3727a8b53110187';
+    }
+
+    /**
+     * Generates an isochrone based on a starting point and distance
+     * Following exactly the example provided in the documentation
+     */
+    async getDistanceIsochrone(point, profile, distanceKm, useRoadsOnly) {
+        return new Promise((resolve, reject) => {
+            try {
+                console.log(`Creating isochrone for ${profile} with distance ${distanceKm}km`);
+                
+                // Convert km to meters (ORS API uses meters for distance)
+                const distanceMeters = Math.min(distanceKm * 1000, 50000); // Max 50 km for free tier
+
+                let request = new XMLHttpRequest();
+
+                const url = `${this.apiUrl}${profile}`;
+
+                request.open('POST', url);
+
+                request.setRequestHeader('Accept', 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8');
+                request.setRequestHeader('Content-Type', 'application/json');
+                request.setRequestHeader('Authorization', this.apiKey);
+
+                // Improved response handler that properly resolves the Promise
+                request.onreadystatechange = () => {
+                    if (request.readyState === 4) {
+                        console.log('Status:', request.status);
+                        console.log('Headers:', request.getAllResponseHeaders());
+                        console.log('Body:', request.responseText);
+                        
+                        if (request.status >= 200 && request.status < 300 && request.responseText) {
+                            try {
+                                const data = JSON.parse(request.responseText);
+                                console.log('Parsed API response:', data);
+                                resolve(data);
+                            } catch (e) {
+                                console.error('Failed to parse API response:', e);
+                                resolve(this.createCircle(point, distanceKm));
+                            }
+                        } else {
+                            console.error('API returned error status:', request.status);
+                            resolve(this.createCircle(point, distanceKm));
+                        }
+                    }
+                };
+
+                // Handle network errors
+                request.onerror = (e) => {
+                    console.error('Network error occurred:', e);
+                    resolve(this.createCircle(point, distanceKm));
+                };
+                
+                // Handle timeouts
+                request.timeout = 20000; // 20 seconds
+                request.ontimeout = () => {
+                    console.error('Request timed out');
+                    resolve(this.createCircle(point, distanceKm));
+                };
+
+                const bodyObj = {
+                    locations: [[point.lng, point.lat]],
+                    range: [distanceMeters],
+                    range_type: 'distance'
+                };
+                
+                // Convert body to string EXACTLY as in the example
+                const body2 = JSON.stringify(bodyObj);
+                console.log("Request body:", body2);
+
+                request.send(body2);
+
+            } catch (error) {
+                console.error('Error in getDistanceIsochrone:', error);
+                resolve(this.createCircle(point, distanceKm));
+            }
+        });
+    }
+    
+    /**
+     * Generates a search area based on the selected transportation mode
+     */
+    async generateSearchArea(center, speed, timeMinutes, mode, useRoadsOnly) {
+        try {
+            // Calculate distance based on speed and time
+            const timeHours = timeMinutes / 60;
+            const distanceKm = speed * timeHours;
+            
+            console.log(`Calculated distance: ${distanceKm.toFixed(2)}km (${speed}km/h for ${timeMinutes}min)`);
+            
+            // Map UI modes to API profiles
+            let profile;
+            
+            if (useRoadsOnly) {
+                // Roads only mode
+                switch (mode) {
+                    case 'walking':
+                        profile = 'foot-walking';
+                        break;
+                    case 'biking':
+                        profile = 'cycling-regular';
+                        break;
+                    case 'driving':
+                        profile = 'driving-car';
+                        break;
+                    default:
+                        profile = 'foot-walking';
+                }
+            } else {
+                // Cross-country mode
+                switch (mode) {
+                    case 'walking':
+                        profile = 'foot-walking';
+                        break;
+                    case 'biking':
+                        profile = 'cycling-mountain';
+                        break;
+                    case 'driving':
+                        profile = 'driving-car';
+                        break;
+                    default:
+                        profile = 'foot-walking';
+                }
+            }
+            
+            console.log(`Using profile: ${profile}, distance: ${distanceKm.toFixed(2)}km, useRoadsOnly: ${useRoadsOnly}`);
+            
+            // Generate isochrone
+            return await this.getDistanceIsochrone(center, profile, distanceKm, useRoadsOnly);
+        } catch (error) {
+            console.error("Failed to generate search area:", error);
+            // Create a fallback circle
+            return this.createCircle(center, distanceKm);
+        }
+    }
+    
+    /**
+     * Creates a simple circle (fallback)
+     */
+    createCircle(center, radiusKm) {
+        console.log(`Creating fallback circle with radius ${radiusKm}km`);
+        
+        // Create a simple circle as GeoJSON
+        const points = [];
+        const numPoints = 64;
+        
+        for (let i = 0; i < numPoints; i++) {
+            const angle = (i * 2 * Math.PI) / numPoints;
+            const dx = Math.cos(angle) * radiusKm;
+            const dy = Math.sin(angle) * radiusKm;
+            
+            // Convert dx/dy to lat/lng (approximation)
+            const lat = center.lat + (dy / 111.32);
+            const lng = center.lng + (dx / (111.32 * Math.cos(center.lat * Math.PI / 180)));
+            
+            points.push([lng, lat]);
+        }
+        
+        // Close the polygon
+        points.push(points[0]);
+        
+        return {
+            type: 'FeatureCollection',
+            features: [{
+                type: 'Feature',
+                properties: {
+                    isFallback: true, // Flag to identify fallback circles
+                    area: Math.PI * radiusKm * radiusKm // Approximate area
+                },
+                geometry: {
+                    type: 'Polygon',
+                    coordinates: [points]
+                }
+            }]
+        };
+    }
+}
+
+        // =====================================================================
+        // POI SERVICE (from pois.js)
+        // =====================================================================
+class POIService {
+    constructor() {
+        // API endpoint for POIs
+        this.apiUrl = 'https://api.openrouteservice.org/pois';
+        
+        // API key - same as the one you provided
+        this.apiKey = '5b3ce3597851110001cf624859e55459fe6d409fb3727a8b53110187';
+        
+        // POI markers layer group
+        this.poiMarkersLayer = null;
+        
+        // POI types and colors
+        this.poiTypes = {
+            'facilities': '#F1C40F',
+            'catering': '#E67E22',
+            'accommodation': '#3498DB',
+            'shopping': '#9B59B6',
+            'transportation': '#2ECC71',
+            'natural': '#1ABC9C',
+            'tourism': '#F39C12',
+            'entertainment': '#D35400',
+            'health': '#C0392B',
+            'education': '#16A085',
+            'service': '#7F8C8D',
+            'financial': '#2980B9',
+            'amenity': '#F1C40F'
+        };
+        
+        // Map specific POI types to categories
+        this.categoryMapping = {
+            'bench': 'facilities',
+            'waste_basket': 'facilities',
+            'drinking_water': 'facilities',
+            'atm': 'financial',
+            'bank': 'financial',
+            'cafe': 'catering',
+            'restaurant': 'catering',
+            'fast_food': 'catering',
+            'bar': 'catering',
+            'pub': 'catering',
+            'hotel': 'accommodation',
+            'hostel': 'accommodation',
+            'hospital': 'health',
+            'pharmacy': 'health',
+            'doctors': 'health',
+            'school': 'education',
+            'university': 'education',
+            'bus_stop': 'transportation',
+            'parking': 'transportation',
+            'fuel': 'transportation',
+            'hunting_stand': 'facilities'
+        };
+    }
+    
+    /**
+     * Get POIs within a circle's bounds
+     * @param {L.LatLngBounds} bounds - The bounds to search within
+     * @returns {Promise<Object>} - GeoJSON of POIs
+     */
+    async getPOIsInBounds(bounds) {
+        return new Promise((resolve, reject) => {
+            try {
+                console.log('Fetching POIs within bounds:', bounds);
+                
+                // Center point of the bounds
+                const centerLng = (bounds.getWest() + bounds.getEast()) / 2;
+                const centerLat = (bounds.getSouth() + bounds.getNorth()) / 2;
+                
+                // Create request
+                let request = new XMLHttpRequest();
+                
+                request.open('POST', this.apiUrl);
+                
+                request.setRequestHeader('Accept', 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8');
+                request.setRequestHeader('Content-Type', 'application/json');
+                request.setRequestHeader('Authorization', this.apiKey);
+                
+                request.onreadystatechange = function() {
+                    if (this.readyState === 4) {
+                        console.log('Status:', this.status);
+                        console.log('Headers:', this.getAllResponseHeaders());
+                        console.log('Body:', this.responseText);
+                        
+                        if (this.status >= 200 && this.status < 300 && this.responseText) {
+                            try {
+                                const data = JSON.parse(this.responseText);
+                                console.log('POI data received:', data);
+                                resolve(data);
+                            } catch (e) {
+                                console.error('Failed to parse POI response:', e);
+                                resolve({ features: [] });
+                            }
+                        } else {
+                            console.error('API returned error status:', this.status);
+                            console.log('Error response:', this.responseText);
+                            resolve({ features: [] });
+                        }
+                    }
+                };
+                
+                // Handle network errors
+                request.onerror = (e) => {
+                    console.error('Network error occurred while fetching POIs:', e);
+                    resolve({ features: [] });
+                };
+                
+                // Handle timeouts
+                request.timeout = 20000; // 20 seconds
+                request.ontimeout = () => {
+                    console.error('POI request timed out');
+                    resolve({ features: [] });
+                };
+                
+                // Create request body in exact format from example
+                const bodyObj = {
+                    "request": "pois",
+                    "geometry": {
+                        "bbox": [
+                            [bounds.getWest(), bounds.getNorth()],  // [west, north]
+                            [bounds.getEast(), bounds.getSouth()]   // [east, south]
+                        ],
+                        "geojson": {
+                            "type": "Point",
+                            "coordinates": [centerLng, centerLat]
+                        },
+                        "buffer": 500  // 500m buffer
+                    }
+                };
+                
+                // Convert to string exactly as in the example
+                const body = JSON.stringify(bodyObj);
+                
+                console.log('POI request body:', body);
+                
+                request.send(body);
+                
+            } catch (error) {
+                console.error('Error in getPOIsInBounds:', error);
+                resolve({ features: [] });
+            }
+        });
+    }
+    
+    /**
+     * Get POIs within a circle
+     * @param {L.Circle|L.GeoJSON} circle - The circle layer to search within
+     * @returns {Promise<Object>} - GeoJSON of POIs
+     */
+    async getPOIsInCircle(circle) {
+        try {
+            // Get bounds from the circle
+            const bounds = circle.getBounds();
+            return await this.getPOIsInBounds(bounds);
+        } catch (error) {
+            console.error('Error getting POIs in circle:', error);
+            return { features: [] };
+        }
+    }
+    
+    /**
+     * Display POIs on the map
+     * @param {Object} poisData - GeoJSON data of POIs
+     * @param {L.Map} map - Leaflet map instance
+     */
+    displayPOIs(poisData, map) {
+        // Remove existing POI markers if any
+        if (this.poiMarkersLayer) {
+            map.removeLayer(this.poiMarkersLayer);
+        }
+        
+        // Create a new layer group for POI markers
+        this.poiMarkersLayer = L.layerGroup().addTo(map);
+        
+        // Check if we have features
+        if (!poisData.features || poisData.features.length === 0) {
+            alert('Keine POIs in diesem Bereich gefunden.');
+            return;
+        }
+        
+        console.log(`Displaying ${poisData.features.length} POIs on the map`);
+        
+        // Create POI count by category for the legend
+        const categoryCount = {};
+        
+        // Process each POI
+        poisData.features.forEach(poi => {
+            try {
+                // Extract coordinates and properties
+                const coords = poi.geometry.coordinates;
+                const props = poi.properties;
+                
+                console.log("POI properties:", props); // Log the complete properties
+                
+                // Get the most specific POI type and category
+                let poiType = 'Unknown';
+                let poiCategory = 'amenity';
+                
+                // Check if category_ids exists
+                if (props.category_ids) {
+                    // Find the first category with a name
+                    for (const categoryKey in props.category_ids) {
+                        if (props.category_ids[categoryKey].category_name) {
+                            poiType = props.category_ids[categoryKey].category_name;
+                            poiCategory = props.category_ids[categoryKey].category_group || this.getCategoryFromType(poiType);
+                            break;
+                        }
+                    }
+                }
+                
+                // Set color based on category
+                const color = this.poiTypes[poiCategory] || '#3388ff';
+                
+                // Update category count
+                categoryCount[poiCategory] = (categoryCount[poiCategory] || 0) + 1;
+                
+                // Create custom icon
+                const poiIcon = L.divIcon({
+                    html: `<div style="background-color:${color};" class="poi-marker"></div>`,
+                    className: 'poi-icon-container',
+                    iconSize: [12, 12]
+                });
+                
+                // Create marker with popup
+                const marker = L.marker([coords[1], coords[0]], {
+                    icon: poiIcon
+                }).addTo(this.poiMarkersLayer);
+                
+                // Create popup content with more detailed info
+                let popupContent = `<div class="poi-popup">`;
+                
+                // Primary name
+                if (props.name) {
+                    popupContent += `<h4>${props.name}</h4>`;
+                } else {
+                    popupContent += `<h4>${this.translateType(poiType)}</h4>`;
+                }
+                
+                // Add POI type if it exists and is not "Unknown"
+                if (poiType && poiType !== 'Unknown') {
+                    popupContent += `<p>Typ: ${this.translateType(poiType)}</p>`;
+                }
+                
+                // Add category
+                popupContent += `<p>Kategorie: ${this.translateCategory(poiCategory)}</p>`;
+                
+                // Add distance from center if available
+                if (props.distance) {
+                    const distanceFormatted = props.distance < 1000 
+                        ? `${Math.round(props.distance)}m` 
+                        : `${(props.distance / 1000).toFixed(2)}km`;
+                    popupContent += `<p>Entfernung: ${distanceFormatted}</p>`;
+                }
+                
+                // Add OSM ID
+                if (props.osm_id) {
+                    popupContent += `<p>OSM ID: <a href="https://www.openstreetmap.org/${props.osm_type === 1 ? 'node' : 'way'}/${props.osm_id}" target="_blank">${props.osm_id}</a></p>`;
+                }
+                
+                popupContent += `</div>`;
+                
+                marker.bindPopup(popupContent);
+                
+            } catch (e) {
+                console.error('Error processing POI:', e);
+            }
+        });
+        
+        // Create and show the legend
+        this.showPOILegend(categoryCount, map);
+        
+        return this.poiMarkersLayer;
+    }
+    
+    /**
+     * Get the category for a specific POI type
+     * @param {string} type - The POI type
+     * @returns {string} - The category
+     */
+    getCategoryFromType(type) {
+        return this.categoryMapping[type] || 'amenity';
+    }
+    
+    /**
+     * Translate POI type to German
+     * @param {string} type - The POI type
+     * @returns {string} - Translated type
+     */
+    translateType(type) {
+        const translations = {
+            'bench': 'Bank',
+            'waste_basket': 'Mülleimer',
+            'drinking_water': 'Trinkwasser',
+            'fountain': 'Brunnen',
+            'toilets': 'Toiletten',
+            'restaurant': 'Restaurant',
+            'cafe': 'Café',
+            'fast_food': 'Schnellrestaurant',
+            'bar': 'Bar',
+            'pub': 'Kneipe',
+            'shelter': 'Unterstand',
+            'atm': 'Geldautomat',
+            'bank': 'Bank (Geldinstitut)',
+            'pharmacy': 'Apotheke',
+            'hospital': 'Krankenhaus',
+            'doctors': 'Arztpraxis',
+            'police': 'Polizei',
+            'post_office': 'Postamt',
+            'recycling': 'Recyclingstation',
+            'bicycle_parking': 'Fahrradparkplatz',
+            'bicycle_rental': 'Fahrradverleih',
+            'fuel': 'Tankstelle',
+            'hunting_stand': 'Hochsitz',
+            'parking': 'Parkplatz',
+            'bus_station': 'Busbahnhof',
+            'bus_stop': 'Bushaltestelle',
+            'ferry_terminal': 'Fährterminal',
+            'Unknown': 'Unbekannter Typ'
+        };
+        
+        return translations[type] || this.formatName(type);
+    }
+    
+    /**
+     * Translate category to German
+     * @param {string} category - The category
+     * @returns {string} - Translated category
+     */
+    translateCategory(category) {
+        const translations = {
+            'facilities': 'Einrichtungen',
+            'catering': 'Gastronomie',
+            'accommodation': 'Unterkunft',
+            'shopping': 'Einkaufen',
+            'transportation': 'Transport',
+            'natural': 'Natur',
+            'tourism': 'Tourismus',
+            'entertainment': 'Unterhaltung',
+            'health': 'Gesundheit',
+            'education': 'Bildung',
+            'service': 'Dienstleistungen',
+            'financial': 'Finanzen',
+            'amenity': 'Öffentliche Einrichtung'
+        };
+        
+        return translations[category] || this.formatName(category);
+    }
+    
+    /**
+     * Format a name for display
+     * @param {string} name - The name to format
+     * @returns {string} - Formatted name
+     */
+    formatName(name) {
+        if (!name) return 'Unbekannt';
+        
+        return name
+            .split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    }
+    
+    /**
+     * Format category name for display
+     * @param {string} category - Raw category name
+     * @returns {string} - Formatted category name
+     */
+    formatCategoryName(category) {
+        // First try to translate it
+        const translated = this.translateCategory(category);
+        if (translated !== this.formatName(category)) {
+            return translated;
+        }
+        
+        // Otherwise format it
+        return this.formatName(category);
+    }
+    
+    /**
+     * Show a legend with POI categories
+     * @param {Object} categoryCount - Count of POIs by category
+     * @param {L.Map} map - Leaflet map instance
+     */
+    showPOILegend(categoryCount, map) {
+        // Create or update legend
+        let legend = document.getElementById('poi-legend');
+        
+        if (!legend) {
+            legend = document.createElement('div');
+            legend.id = 'poi-legend';
+            legend.className = 'poi-legend leaflet-control';
+            document.querySelector('.leaflet-bottom.leaflet-right').appendChild(legend);
+        }
+        
+        // Build legend content
+        let legendContent = `
+            <div class="legend-header">
+                <h4>POI Legende</h4>
+                <button id="close-legend" class="close-legend">×</button>
+            </div>
+            <div class="legend-content">
+        `;
+        
+        // Add each category with count
+        Object.keys(categoryCount).forEach(category => {
+            const color = this.poiTypes[category] || '#3388ff';
+            legendContent += `
+                <div class="legend-item">
+                    <span class="color-box" style="background-color:${color};"></span>
+                    <span class="category-name">${this.formatCategoryName(category)}</span>
+                    <span class="category-count">(${categoryCount[category]})</span>
+                </div>
+            `;
+        });
+        
+        legendContent += `</div>`;
+        
+        // Set legend content
+        legend.innerHTML = legendContent;
+        
+        // Add close button event
+        document.getElementById('close-legend').addEventListener('click', () => {
+            legend.remove();
+        });
+    }
+    
+    /**
+     * Clear POIs from the map
+     * @param {L.Map} map - Leaflet map instance
+     */
+    clearPOIs(map) {
+        if (this.poiMarkersLayer) {
+            map.removeLayer(this.poiMarkersLayer);
+            this.poiMarkersLayer = null;
+        }
+        
+        // Remove legend if exists
+        const legend = document.getElementById('poi-legend');
+        if (legend) {
+            legend.remove();
+        }
+    }
+}
+
+        // =====================================================================
+        // KML EXPORT (from kmlExport.js)
+        // =====================================================================
+class KMLExporter {
+    constructor() {
+        this.namespace = 'http://www.opengis.net/kml/2.2';
+    }
+
+    /**
+     * Erstellt KML-Inhalt für alle gespeicherten Kreise
+     * @param {Array} circles - Array der Kreise
+     * @param {Object} selectedPoint - Der ausgewählte Mittelpunkt
+     * @returns {string} KML-String
+     */
+    exportCirclesToKML(circles, selectedPoint) {
+        if (!circles || circles.length === 0) {
+            throw new Error('Keine Kreise zum Exportieren vorhanden.');
+        }
+
+        let kmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="${this.namespace}">
+  <Document>
+    <name>DLRG Landau - Suchradius Export</name>
+    <description>Exportierte Suchradius-Kreise vom ${new Date().toLocaleString('de-DE')}</description>
+    
+    <Style id="circleStyle">
+      <LineStyle>
+        <color>ff0000ff</color>
+        <width>2</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>330000ff</color>
+      </PolyStyle>
+    </Style>
+    
+    <Style id="centerStyle">
+      <IconStyle>
+        <color>ff0000ff</color>
+        <scale>1.2</scale>
+        <Icon>
+          <href>http://maps.google.com/mapfiles/kml/pushpin/red-pushpin.png</href>
+        </Icon>
+      </IconStyle>
+    </Style>`;
+
+        // Mittelpunkt hinzufügen
+        if (selectedPoint) {
+            kmlContent += `
+    <Placemark>
+      <name>Suchzentrum</name>
+      <description>Mittelpunkt der Suchradius-Berechnung</description>
+      <styleUrl>#centerStyle</styleUrl>
+      <Point>
+        <coordinates>${selectedPoint.lng},${selectedPoint.lat},0</coordinates>
+      </Point>
+    </Placemark>`;
+        }
+
+        // Kreise hinzufügen
+        circles.forEach((circleObj, index) => {
+            const coordinates = this.getCircleCoordinates(circleObj, selectedPoint);
+            
+            kmlContent += `
+    <Placemark>
+      <name>Suchradius ${index + 1}</name>
+      <description>${this.escapeXML(circleObj.description)}</description>
+      <styleUrl>#circleStyle</styleUrl>
+      <Polygon>
+        <extrude>0</extrude>
+        <altitudeMode>clampToGround</altitudeMode>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>
+              ${coordinates}
+            </coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>`;
+        });
+
+        kmlContent += `
+  </Document>
+</kml>`;
+
+        return kmlContent;
+    }
+
+    /**
+     * Extrahiert Koordinaten aus einem Kreis
+     */
+    getCircleCoordinates(circleObj, centerPoint) {
+        // Für erweiterte Kreise (GeoJSON/Isochrone)
+        if (circleObj.isAdvanced && circleObj.circle.toGeoJSON) {
+            const geoJson = circleObj.circle.toGeoJSON();
+            if (geoJson.features && geoJson.features[0] && geoJson.features[0].geometry) {
+                const coords = geoJson.features[0].geometry.coordinates[0];
+                return coords.map(coord => `${coord[0]},${coord[1]},0`).join('\n              ');
+            }
+        }
+        
+        // Für einfache Kreise
+        if (circleObj.circle && circleObj.circle.getRadius) {
+            const radius = circleObj.circle.getRadius(); // in Metern
+            const center = circleObj.circle.getLatLng();
+            return this.generateCircleCoordinates(center, radius / 1000); // Konvertierung zu km
+        }
+
+        // Fallback: Kreis aus Beschreibung extrahieren
+        const radiusMatch = circleObj.description.match(/\((\d+\.?\d*) km\)/);
+        if (radiusMatch && centerPoint) {
+            const radius = parseFloat(radiusMatch[1]);
+            return this.generateCircleCoordinates(centerPoint, radius);
+        }
+
+        return '';
+    }
+
+    /**
+     * Generiert Kreis-Koordinaten basierend auf Mittelpunkt und Radius
+     */
+    generateCircleCoordinates(center, radiusKm) {
+        const points = [];
+        const numPoints = 64;
+        
+        for (let i = 0; i <= numPoints; i++) {
+            const angle = (i * 2 * Math.PI) / numPoints;
+            const dx = Math.cos(angle) * radiusKm;
+            const dy = Math.sin(angle) * radiusKm;
+            
+            // Konvertierung dx/dy zu lat/lng
+            const lat = center.lat + (dy / 111.32);
+            const lng = center.lng + (dx / (111.32 * Math.cos(center.lat * Math.PI / 180)));
+            
+            points.push(`${lng},${lat},0`);
+        }
+        
+        return points.join('\n              ');
+    }
+
+    /**
+     * Escapes XML-Zeichen
+     */
+    escapeXML(str) {
+        return str.replace(/[<>&'"]/g, function (c) {
+            switch (c) {
+                case '<': return '&lt;';
+                case '>': return '&gt;';
+                case '&': return '&amp;';
+                case '\'': return '&apos;';
+                case '"': return '&quot;';
+            }
+        });
+    }
+
+    /**
+     * Startet den Download der KML-Datei
+     */
+    downloadKML(kmlContent, filename = 'suchradius-export.kml') {
+        const blob = new Blob([kmlContent], { type: 'application/vnd.google-earth.kml+xml' });
+        const url = window.URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        window.URL.revokeObjectURL(url);
+    }
+}
+
+
+        // =====================================================================
+        // MAP INITIALIZATION (from map.js)
+        // =====================================================================
+let map;
+let markers = [];
+let circles = [];
+let selectedPoint = null;
+let currentMapLayer;
+
+// Define map layers
+const mapLayers = {
+    standard: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
+    }),
+    
+    satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+        maxZoom: 19
+    }),
+    
+    streets: L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a>',
+        maxZoom: 19
+    })
+};
+
+// Use constants from configuration section above
+// const LANDAU_COORDS = DEFAULT_CENTER;
+// const DEFAULT_ZOOM is already defined in configuration
+
+function initMap() {
+    // Initialize the map centered on Landau in der Pfalz
+    map = L.map('map').setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+
+    // Set the default map layer (standard)
+    currentMapLayer = mapLayers.standard;
+    currentMapLayer.addTo(map);
+
+    // Add click event listener
+    map.on('click', onMapClick);
+}
+
+function changeMapType(type) {
+    // Remove current layer
+    if (currentMapLayer) {
+        map.removeLayer(currentMapLayer);
+    }
+
+    // Add new layer based on selection
+    switch(type) {
+        case 'satellite':
+            currentMapLayer = mapLayers.satellite;
+            break;
+        case 'streets':
+            currentMapLayer = mapLayers.streets;
+            break;
+        default:
+            currentMapLayer = mapLayers.standard;
+    }
+
+    currentMapLayer.addTo(map);
+}
+
+function onMapClick(e) {
+    // Clear existing marker if there is one
+    if (markers.length > 0) {
+        markers.forEach(marker => map.removeLayer(marker));
+        markers = [];
+    }
+
+    // Save selected point
+    selectedPoint = e.latlng;
+
+    // Add a new marker
+    const marker = L.marker(e.latlng).addTo(map);
+    markers.push(marker);
+    
+    // Show coordinates in popup
+    marker.bindPopup(`Ausgewählter Punkt<br>Breitengrad: ${e.latlng.lat.toFixed(5)}<br>Längengrad: ${e.latlng.lng.toFixed(5)}`).openPopup();
+}
+
+function addTravelCircle(radius, color, description) {
+    if (!selectedPoint) {
+        alert('Bitte wählen Sie zuerst einen Punkt auf der Karte aus!');
+        return null;
+    }
+
+    const circle = L.circle(selectedPoint, {
+        color: color,
+        fillColor: color,
+        fillOpacity: 0.2,
+        radius: radius * 1000 // Convert km to meters
+    }).addTo(map);
+
+    circle.bindTooltip(description);
+    circles.push({ circle, description });
+    
+    return { circle, description };
+}
+
+function removeCircle(index) {
+    if (circles[index]) {
+        map.removeLayer(circles[index].circle);
+        circles.splice(index, 1);
+    }
+}
+
+function clearAll() {
+    // Remove all circles
+    circles.forEach(circle => map.removeLayer(circle.circle));
+    circles = [];
+    
+    // Remove all markers
+    markers.forEach(marker => map.removeLayer(marker));
+    markers = [];
+    
+    // Reset selected point
+    selectedPoint = null;
+}
+
+function highlightStreets() {
+    // This would typically use a routing API like OSRM or MapBox
+    alert('Straßenhervorhebung erfordert eine Routing-API-Integration.');
+}
+
+// Initialize the map when the window loads
+window.addEventListener('load', initMap);
+
+        // =====================================================================
+        // MAIN APPLICATION LOGIC (from main.js)
+        // =====================================================================
+document.addEventListener('DOMContentLoaded', function() {
+    // DOM elements
+    const speedInput = document.getElementById('speed');
+    const timeInput = document.getElementById('time');
+    const calculateBtn = document.getElementById('calculate-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const circlesContainer = document.getElementById('circles-container');
+    const controlPanel = document.getElementById('control-panel');
+    const minimizeBtn = document.getElementById('minimize-btn');
+    const panelHeader = document.querySelector('.panel-header');
+    
+    // Transport mode buttons
+    const walkingBtn = document.getElementById('walking');
+    const bikingBtn = document.getElementById('biking');
+    const drivingBtn = document.getElementById('driving');
+    
+    // Map type buttons
+    const standardMapBtn = document.getElementById('standard-map');
+    const satelliteMapBtn = document.getElementById('satellite-map');
+    const streetsMapBtn = document.getElementById('streets-map');
+    
+    let activeTransportMode = 'walking';
+    
+    // Minimize/maximize panel
+    panelHeader.addEventListener('click', function(e) {
+        // Prevent action when clicking on the minimize button specifically
+        // (it has its own handler)
+        if (e.target === minimizeBtn || e.target.closest('.minimize-btn')) {
+            return;
+        }
+        
+        togglePanel();
+    });
+    
+    minimizeBtn.addEventListener('click', togglePanel);
+    
+    function togglePanel() {
+        controlPanel.classList.toggle('minimized');
+    }
+    
+    // Map type selection
+    standardMapBtn.addEventListener('click', function() {
+        setActiveMapType('standard');
+        changeMapType('standard');
+    });
+    
+    satelliteMapBtn.addEventListener('click', function() {
+        setActiveMapType('satellite');
+        changeMapType('satellite');
+    });
+    
+    streetsMapBtn.addEventListener('click', function() {
+        setActiveMapType('streets');
+        changeMapType('streets');
+    });
+    
+    function setActiveMapType(type) {
+        // Update UI
+        [standardMapBtn, satelliteMapBtn, streetsMapBtn].forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        document.getElementById(`${type}-map`).classList.add('active');
+    }
+    
+    // Transport mode selection
+    walkingBtn.addEventListener('click', function() {
+        setActiveMode('walking');
+        speedInput.value = transportSpeeds.walking;
+    });
+    
+    bikingBtn.addEventListener('click', function() {
+        setActiveMode('biking');
+        speedInput.value = transportSpeeds.biking;
+    });
+    
+    drivingBtn.addEventListener('click', function() {
+        setActiveMode('driving');
+        speedInput.value = transportSpeeds.driving;
+    });
+    
+    function setActiveMode(mode) {
+        activeTransportMode = mode;
+        
+        // Update UI
+        [walkingBtn, bikingBtn, drivingBtn].forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        document.getElementById(mode).classList.add('active');
+    }
+    
+    // Add collapsible advanced options section
+    const advancedOptionsSection = document.createElement('div');
+    advancedOptionsSection.className = 'collapsible-section';
+    advancedOptionsSection.innerHTML = `
+        <div class="section-header" id="advanced-options-header">
+            <h3>Erweiterte Optionen</h3>
+            <span class="toggle-icon">▼</span>
+        </div>
+        <div class="section-content" id="advanced-options-content">
+            <div class="option-group">
+                <button id="consider-obstacles" class="btn btn-secondary">Hindernisse berücksichtigen</button>
+                <p class="option-description">Berücksichtigt Flüsse, Autobahnen und andere Barrieren bei der Berechnung</p>
+            </div>
+            <div class="option-group">
+                <label>Geländemodus:</label>
+                <div class="terrain-mode-buttons">
+                    <button id="all-terrain" class="btn btn-secondary active">Querfeldein</button>
+                    <button id="roads-only" class="btn btn-secondary">Nur Straßen</button>
+                </div>
+                <p class="option-description">Querfeldein: kann über Felder gehen. Nur Straßen: bleibt auf Wegen</p>
+            </div>
+        </div>
+    `;
+    
+    // Insert after transport modes
+    document.querySelector('.transport-modes').parentNode.after(advancedOptionsSection);
+    
+    // Toggle collapsible section
+    document.getElementById('advanced-options-header').addEventListener('click', function() {
+        const content = document.getElementById('advanced-options-content');
+        const icon = this.querySelector('.toggle-icon');
+        
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            icon.textContent = '▼';
+        } else {
+            content.style.display = 'none';
+            icon.textContent = '►';
+        }
+    });
+    
+    // Initialize the isochrone service
+    const isochroneService = new IsochroneService();
+    
+    // Consider obstacles button handler
+    const obstaclesBtn = document.getElementById('consider-obstacles');
+    let obstaclesEnabled = false;
+    
+    obstaclesBtn.addEventListener('click', function() {
+        obstaclesEnabled = !obstaclesEnabled;
+        
+        if (obstaclesEnabled) {
+            this.classList.add('btn-active');
+            this.textContent = 'Hindernisse werden berücksichtigt';
+        } else {
+            this.classList.remove('btn-active');
+            this.textContent = 'Hindernisse berücksichtigen';
+        }
+    });
+    
+    // Terrain mode selection
+    const allTerrainBtn = document.getElementById('all-terrain');
+    const roadsOnlyBtn = document.getElementById('roads-only');
+    let useRoadsOnly = false;
+    
+    allTerrainBtn.addEventListener('click', function() {
+        if (!this.classList.contains('active')) {
+            this.classList.add('active');
+            roadsOnlyBtn.classList.remove('active');
+            useRoadsOnly = false;
+        }
+    });
+    
+    roadsOnlyBtn.addEventListener('click', function() {
+        if (!this.classList.contains('active')) {
+            this.classList.add('active');
+            allTerrainBtn.classList.remove('active');
+            useRoadsOnly = true;
+        }
+    });
+    
+    // Calculate radius button
+    calculateBtn.addEventListener('click', async function() {
+        // Validate inputs
+        if (!validateNumericInput(speedInput.value) || !validateNumericInput(timeInput.value)) {
+            alert('Bitte geben Sie gültige Werte für Geschwindigkeit und Zeit ein.');
+            return;
+        }
+        
+        if (!selectedPoint) {
+            alert('Bitte wählen Sie zuerst einen Punkt auf der Karte aus.');
+            return;
+        }
+        
+        // Get input values
+        const speed = parseFloat(speedInput.value);
+        const time = parseFloat(timeInput.value);
+        
+        // Get the current transport mode
+        // Fix: Ensure we get the mode properly
+        let transportMode = activeTransportMode;
+        
+        console.log(`Active transport mode: ${transportMode}`);
+        
+        // Loading indicator
+        const oldButtonText = this.textContent;
+        this.textContent = 'Berechne...';
+        this.disabled = true;
+        
+        try {
+            if (obstaclesEnabled) {
+                console.log(`Calculating with obstacles: mode=${transportMode}, speed=${speed}, time=${time}, roadsOnly=${useRoadsOnly}`);
+                
+                // Generate search area with obstacles
+                const searchArea = await isochroneService.generateSearchArea(
+                    selectedPoint,
+                    speed,
+                    time,
+                    transportMode,
+                    useRoadsOnly
+                );
+                
+                // Check if result is a fallback circle
+                const isFallback = searchArea.features && 
+                                  searchArea.features[0] && 
+                                  searchArea.features[0].properties && 
+                                  searchArea.features[0].properties.isFallback;
+                
+                if (isFallback) {
+                    console.warn('Using fallback circle - API response could not be processed');
+                }
+                
+                // Random color
+                const color = getRandomColor();
+                
+                // Create description
+                const terrainModeText = useRoadsOnly ? 'Nur Straßen' : 'Querfeldein';
+                let description = `${speed.toFixed(1)} km/h für ${time} Min. (${terrainModeText})`;
+                
+                // Add area if available
+                if (searchArea.features[0].properties && searchArea.features[0].properties.area) {
+                    const area = searchArea.features[0].properties.area;
+                    description += ` - ${area.toFixed(2)} km²`;
+                }
+                
+                // Add fallback note if it's a fallback
+                if (isFallback) {
+                    description += ' [Fallback-Kreis]';
+                }
+                
+                // Add GeoJSON to map
+                const searchAreaLayer = L.geoJSON(searchArea, {
+                    style: {
+                        color: color,
+                        weight: 3,
+                        fillColor: color,
+                        fillOpacity: 0.2,
+                        dashArray: useRoadsOnly ? '5, 5' : ''  // Dashed line for "Roads Only"
+                    }
+                }).addTo(map);
+                
+                // Add tooltip
+                searchAreaLayer.bindTooltip(description);
+                
+                // Save circle
+                const circleObj = { 
+                    circle: searchAreaLayer, 
+                    description, 
+                    isAdvanced: true,
+                    terrainMode: terrainModeText,
+                    isFallback: isFallback
+                };
+                
+                circles.push(circleObj);
+                
+                // Add to UI list
+                addCircleToList(circleObj, circles.length - 1);
+                
+                // Fit map to show the entire area
+                map.fitBounds(searchAreaLayer.getBounds());
+            } else {
+                // Basic circle function
+                const radius = calculateDistance(speed, time);
+                const circleObj = addTravelCircle(radius, getRandomColor(), 
+                    `${speed.toFixed(1)} km/h für ${time} Min. (${radius.toFixed(2)} km)`);
+                
+                if (circleObj) {
+                    addCircleToList(circleObj, circles.length - 1);
+                }
+            }
+        } catch (error) {
+            console.error('Error calculating search area:', error);
+            alert(`Fehler bei der Berechnung: ${error.message}`);
+            
+            // Create simple circle as fallback
+            const radius = calculateDistance(speed, time);
+            const circleObj = addTravelCircle(radius, getRandomColor(), 
+                `${speed.toFixed(1)} km/h für ${time} Min. (${radius.toFixed(2)} km) [Fallback]`);
+            
+            if (circleObj) {
+                addCircleToList(circleObj, circles.length - 1);
+            }
+        } finally {
+            // Always restore button state
+            this.textContent = oldButtonText;
+            this.disabled = false;
+        }
+    });
+    
+    // Function to show a loading spinner
+    function showLoadingSpinner(show) {
+        // Check if the spinner already exists
+        let spinner = document.getElementById('loading-spinner');
+        
+        if (show) {
+            if (!spinner) {
+                // Create a new spinner
+                spinner = document.createElement('div');
+                spinner.id = 'loading-spinner';
+                spinner.className = 'loading-spinner';
+                spinner.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Berechne...';
+                document.body.appendChild(spinner);
+            }
+            spinner.style.display = 'flex';
+        } else if (spinner) {
+            // Hide the spinner
+            spinner.style.display = 'none';
+        }
+    }
+    
+    // Clear all button
+    clearBtn.addEventListener('click', function() {
+        clearAll();
+        // Clear the list in UI
+        circlesContainer.innerHTML = '';
+    });
+    
+    // Add circle to the list in UI
+    function addCircleToList(circleObj, index) {
+        const li = document.createElement('li');
+        li.className = 'circle-item';
+        
+        // Determine color
+        let color;
+        if (circleObj.circle.options && circleObj.circle.options.color) {
+            color = circleObj.circle.options.color;
+        } else if (circleObj.circle.options && circleObj.circle.options.style) {
+            color = circleObj.circle.options.style.color;
+        } else {
+            color = '#3388ff'; // Default color
+        }
+        
+        // Show icon depending on terrain mode
+        let terrainIcon = '';
+        if (circleObj.isAdvanced) {
+            terrainIcon = circleObj.terrainMode === 'Nur Straßen' 
+                ? '<i class="fas fa-road" title="Nur Straßen"></i> ' 
+                : '<i class="fas fa-mountain" title="Querfeldein"></i> ';
+        }
+        
+        li.innerHTML = `
+            <span class="color-box" style="background-color: ${color}"></span>
+            ${terrainIcon}${circleObj.description}
+            <button class="delete-btn" data-index="${index}">×</button>
+        `;
+        
+        circlesContainer.appendChild(li);
+        
+        // Add delete event
+        li.querySelector('.delete-btn').addEventListener('click', function() {
+            const index = parseInt(this.getAttribute('data-index'));
+            removeCircle(index);
+            updateCirclesList();
+        });
+    }
+    
+    // Update the circles list after deletion
+    function updateCirclesList() {
+        circlesContainer.innerHTML = '';
+        circles.forEach((circle, index) => {
+            addCircleToList(circle, index);
+        });
+    }
+    
+    // Initialize the POI service
+    const poiService = new POIService();
+    
+    // Create the Show POIs button
+    const showPoisBtn = document.createElement('button');
+    showPoisBtn.id = 'show-pois-btn';
+    showPoisBtn.textContent = 'POIs im letzten Kreis anzeigen';
+    showPoisBtn.disabled = true; // Initially disabled
+    
+    // Create a container for POI status
+    const poiStatusContainer = document.createElement('div');
+    poiStatusContainer.className = 'poi-status';
+    
+    // Add button after the clear button
+    clearBtn.after(showPoisBtn);
+    showPoisBtn.after(poiStatusContainer);
+    
+    // Enable/disable POI button when circles change
+    function updatePoiButtonState() {
+        showPoisBtn.disabled = circles.length === 0;
+    }
+    
+    // Add event to show POIs
+    showPoisBtn.addEventListener('click', async function() {
+        if (circles.length === 0) {
+            alert('Bitte erstellen Sie zuerst einen Suchbereich.');
+            return;
+        }
+        
+        // Show loading state
+        const originalText = this.textContent;
+        this.textContent = 'Lade POIs...';
+        this.classList.add('loading');
+        this.disabled = true;
+        poiStatusContainer.textContent = 'Suche nach wichtigen Punkten...';
+        
+        try {
+            // Get the last created circle
+            const lastCircle = circles[circles.length - 1].circle;
+            
+            // Clear any existing POIs
+            poiService.clearPOIs(map);
+            
+            // Get POIs in the circle
+            const poisData = await poiService.getPOIsInCircle(lastCircle);
+            
+            // Display POIs on the map
+            poiService.displayPOIs(poisData, map);
+            
+            // Update status
+            if (poisData.features && poisData.features.length > 0) {
+                poiStatusContainer.textContent = `${poisData.features.length} POIs gefunden`;
+            } else {
+                poiStatusContainer.textContent = 'Keine POIs in diesem Bereich gefunden';
+            }
+        } catch (error) {
+            console.error('Error showing POIs:', error);
+            poiStatusContainer.textContent = 'Fehler beim Laden der POIs';
+            alert('Es gab einen Fehler beim Laden der POIs. Bitte versuchen Sie es später erneut.');
+        } finally {
+            // Restore button state
+            this.textContent = originalText;
+            this.classList.remove('loading');
+            this.disabled = false;
+        }
+    });
+    
+    // Update POI button when circles change
+    const originalAddCircleToList = addCircleToList;
+    addCircleToList = function(circleObj, index) {
+        originalAddCircleToList(circleObj, index);
+        updatePoiButtonState();
+    };
+    
+    const originalUpdateCirclesList = updateCirclesList;
+    updateCirclesList = function() {
+        originalUpdateCirclesList();
+        updatePoiButtonState();
+    };
+    
+    // Clear POIs when all circles are cleared
+    const originalClearAll = clearAll;
+    clearAll = function() {
+        originalClearAll();
+        poiService.clearPOIs(map);
+        updatePoiButtonState();
+        poiStatusContainer.textContent = '';
+    };
+        // KML Export functionality
+    const exportKmlBtn = document.getElementById('export-kml-btn');
+    const kmlExporter = new KMLExporter();
+    
+    exportKmlBtn.addEventListener('click', function() {
+        try {
+            if (!circles || circles.length === 0) {
+                alert('Keine Kreise zum Exportieren vorhanden. Bitte erstellen Sie zuerst mindestens einen Suchradius.');
+                return;
+            }
+            
+            if (!selectedPoint) {
+                alert('Kein Mittelpunkt verfügbar. Bitte wählen Sie einen Punkt auf der Karte aus.');
+                return;
+            }
+            
+            // Loading state
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Exportiere...';
+            this.disabled = true;
+            
+            // Generate filename with timestamp
+            const now = new Date();
+            const timestamp = now.toISOString().slice(0, 19).replace(/[:.]/g, '-');
+            const filename = `DLRG-Landau-Suchradius-${timestamp}.kml`;
+            
+            // Create and download KML
+            const kmlContent = kmlExporter.exportCirclesToKML(circles, selectedPoint);
+            kmlExporter.downloadKML(kmlContent, filename);
+            
+            // Show success message
+            setTimeout(() => {
+                alert(`KML-Datei "${filename}" wurde erfolgreich erstellt und heruntergeladen.`);
+            }, 500);
+            
+        } catch (error) {
+            console.error('KML Export Error:', error);
+            alert(`Fehler beim KML-Export: ${error.message}`);
+        } finally {
+            // Restore button state
+            setTimeout(() => {
+                this.innerHTML = originalText;
+                this.disabled = false;
+            }, 1000);
+        }
+    });
+});
+
+        
+        // =====================================================================
+        // INITIALIZE KML LAYER MANAGER
+        // =====================================================================
+        // Wait for map to be initialized, then create KML manager
+        window.addEventListener('load', function() {
+            // Give map time to initialize
+            setTimeout(() => {
+                if (typeof map !== 'undefined' && map) {
+                    window.kmlLayerManager = new KMLLayerManager(map);
+                    console.log('KML Layer Manager initialized');
+                }
+            }, 100);
+        });
+    </script>
+</body>
+</html>
