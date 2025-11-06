@@ -519,6 +519,67 @@ body, html {
     margin-top: 5px;
     text-align: center;
 }
+
+/* Fullscreen Button */
+#fullscreen-btn {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 1001;
+    width: 40px;
+    height: 40px;
+    background: white;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 18px;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.2s;
+}
+
+#fullscreen-btn:hover {
+    background-color: #f4f4f4;
+}
+
+/* Fullscreen mode styles */
+#fullscreen-container:-webkit-full-screen {
+    width: 100%;
+    height: 100%;
+}
+
+#fullscreen-container:-moz-full-screen {
+    width: 100%;
+    height: 100%;
+}
+
+#fullscreen-container:-ms-fullscreen {
+    width: 100%;
+    height: 100%;
+}
+
+#fullscreen-container:fullscreen {
+    width: 100%;
+    height: 100%;
+}
+
+/* Ensure map and panel are properly sized in fullscreen */
+#fullscreen-container:-webkit-full-screen #map,
+#fullscreen-container:-moz-full-screen #map,
+#fullscreen-container:-ms-fullscreen #map,
+#fullscreen-container:fullscreen #map {
+    height: 100vh;
+}
+
+#fullscreen-container:-webkit-full-screen .control-panel,
+#fullscreen-container:-moz-full-screen .control-panel,
+#fullscreen-container:-ms-fullscreen .control-panel,
+#fullscreen-container:fullscreen .control-panel {
+    max-height: 95vh;
+}
 .export-btn {
     width: 100%;
     padding: 10px;
@@ -548,9 +609,15 @@ body, html {
     </style>
 </head>
 <body>
-    <div id="map"></div>
-    
-    <div class="control-panel" id="control-panel">
+    <div id="fullscreen-container">
+        <div id="map"></div>
+        
+        <!-- Fullscreen Button -->
+        <button id="fullscreen-btn" title="Vollbildmodus" aria-label="Vollbildmodus umschalten">
+            <i class="fa fa-expand"></i>
+        </button>
+        
+        <div class="control-panel" id="control-panel">
         <div class="panel-header">
             <h3>Vermissten-Radius-Rechner</h3>
             <button id="minimize-btn" class="minimize-btn"><i class="fa fa-chevron-up"></i></button>
@@ -560,24 +627,25 @@ body, html {
             <div class="input-group">
                 <label>Kartentyp:</label>
                 <div class="map-types">
-                    <button id="standard-map" class="map-type-btn active">Standard</button>
-                    <button id="satellite-map" class="map-type-btn">Satellit</button>
-                    <button id="streets-map" class="map-type-btn">Straßen</button>
+                    <select id="base-map-select" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px;">
+                        <option value="standard">Standard OSM</option>
+                        <option value="satellite">Satellit</option>
+                        <option value="humanitarian">Humanitarian</option>
+                        <option value="opentopomap">OpenTopoMap</option>
+                        <option value="cyclosm">CyclOSM</option>
+                        <option value="osmde">OSM Deutschland</option>
+                        <option value="cartodb">CartoDB Light</option>
+                    </select>
+                </div>
+                <label>Overlay-Layer:</label>
+                <div id="overlay-checkboxes" style="margin-top: 5px;">
+                    <!-- Overlay checkboxes will be added here dynamically -->
                 </div>
             </div>
             
             <div class="input-group">
                 <label for="speed">Geschwindigkeit (km/h):</label>
                 <input type="number" id="speed" min="1" value="5">
-            </div>
-            
-            <div class="input-group">
-                <label>Fortbewegungsart:</label>
-                <div class="transport-modes">
-                    <button id="walking" class="transport-mode active" data-mode="walking">Zu Fuß</button>
-                    <button id="biking" class="transport-mode" data-mode="biking">Fahrrad</button>
-                    <button id="driving" class="transport-mode" data-mode="driving">Auto</button>
-                </div>
             </div>
             
             <div class="input-group">
@@ -597,6 +665,7 @@ body, html {
             </div>
         </div>
     </div>
+    </div><!-- Close fullscreen-container -->
 
     <!-- External CDN scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -1229,27 +1298,77 @@ class WeatherService {
                 this.layers.forEach((layerData, layerId) => {
                     const layerItem = document.createElement('div');
                     layerItem.className = 'checkbox-container';
-                    layerItem.innerHTML = `
-                        <input type="checkbox" id="kml-layer-${layerId}" ${layerData.visible ? 'checked' : ''}>
-                        <span class="checkmark"></span>
-                        <span class="color-box" style="background-color: ${layerData.color}; margin-left: 5px;"></span>
-                        <span style="margin-left: 5px;">${layerData.name}</span>
-                        ${!layerData.isPermanent ? `<button class="delete-btn" style="float: right; margin-left: 10px;" data-layer-id="${layerId}">×</button>` : ''}
-                    `;
+                    layerItem.style.cursor = 'pointer';
                     
-                    // Checkbox handler
-                    const checkbox = layerItem.querySelector('input[type="checkbox"]');
-                    checkbox.addEventListener('change', () => {
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `kml-layer-${layerId}`;
+                    checkbox.checked = layerData.visible;
+                    
+                    const checkmark = document.createElement('span');
+                    checkmark.className = 'checkmark';
+                    
+                    const colorBox = document.createElement('span');
+                    colorBox.className = 'color-box';
+                    colorBox.style.backgroundColor = layerData.color;
+                    colorBox.style.marginLeft = '5px';
+                    
+                    const label = document.createElement('span');
+                    label.style.marginLeft = '5px';
+                    label.textContent = layerData.name;
+                    
+                    layerItem.appendChild(checkbox);
+                    layerItem.appendChild(checkmark);
+                    layerItem.appendChild(colorBox);
+                    layerItem.appendChild(label);
+                    
+                    if (!layerData.isPermanent) {
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'delete-btn';
+                        deleteBtn.style.float = 'right';
+                        deleteBtn.style.marginLeft = '10px';
+                        deleteBtn.textContent = '×';
+                        deleteBtn.setAttribute('data-layer-id', layerId);
+                        
+                        deleteBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            this.removeLayer(layerId);
+                        });
+                        
+                        layerItem.appendChild(deleteBtn);
+                    }
+                    
+                    // Checkbox handler - make sure it works
+                    checkbox.addEventListener('change', (e) => {
+                        e.stopPropagation();
                         this.toggleLayer(layerId, checkbox.checked);
                     });
                     
-                    // Delete button handler (for uploaded layers only)
-                    if (!layerData.isPermanent) {
-                        const deleteBtn = layerItem.querySelector('.delete-btn');
-                        deleteBtn.addEventListener('click', () => {
-                            this.removeLayer(layerId);
-                        });
-                    }
+                    // Make layer item keyboard accessible
+                    layerItem.setAttribute('tabindex', '0');
+                    layerItem.setAttribute('role', 'checkbox');
+                    layerItem.setAttribute('aria-checked', layerData.visible ? 'true' : 'false');
+                    
+                    // Also toggle on click of the container (except for delete button)
+                    layerItem.addEventListener('click', (e) => {
+                        if (e.target !== checkbox && !e.target.classList.contains('delete-btn')) {
+                            checkbox.checked = !checkbox.checked;
+                            this.toggleLayer(layerId, checkbox.checked);
+                            layerItem.setAttribute('aria-checked', checkbox.checked ? 'true' : 'false');
+                        }
+                    });
+                    
+                    // Keyboard navigation support
+                    layerItem.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            if (!e.target.classList.contains('delete-btn')) {
+                                checkbox.checked = !checkbox.checked;
+                                this.toggleLayer(layerId, checkbox.checked);
+                                layerItem.setAttribute('aria-checked', checkbox.checked ? 'true' : 'false');
+                            }
+                        }
+                    });
                     
                     listContainer.appendChild(layerItem);
                 });
@@ -2149,11 +2268,71 @@ const mapLayers = {
         maxZoom: 19
     }),
     
-    streets: L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+    humanitarian: L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a>',
         maxZoom: 19
+    }),
+    
+    opentopomap: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
+        maxZoom: 17
+    }),
+    
+    cyclosm: L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', {
+        attribution: '<a href="https://github.com/cyclosm/cyclosm-cartocss-style/releases" title="CyclOSM - Open Bicycle render">CyclOSM</a> | Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 20
+    }),
+    
+    osmde: L.tileLayer('https://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 18
+    }),
+    
+    cartodb: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        maxZoom: 19,
+        subdomains: 'abcd'
     })
 };
+
+// Define overlay layers
+const overlayLayers = {
+    labels: {
+        name: 'Beschriftungen',
+        layer: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://carto.com/attributions">CARTO</a>',
+            maxZoom: 19,
+            subdomains: 'abcd',
+            pane: 'shadowPane'
+        })
+    },
+    hillshade: {
+        name: 'Höhenschattierung',
+        layer: L.tileLayer('https://tiles.wmflabs.org/hillshading/{z}/{x}/{y}.png', {
+            attribution: 'Hillshading: SRTM3 v2 (<a href="https://www2.jpl.nasa.gov/srtm/">NASA</a>)',
+            maxZoom: 15,
+            opacity: 0.5
+        })
+    },
+    hiking: {
+        name: 'Wanderwege',
+        layer: L.tileLayer('https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://hiking.waymarkedtrails.org">Waymarked Trails</a>',
+            maxZoom: 18,
+            opacity: 0.7
+        })
+    },
+    cycling: {
+        name: 'Radwege',
+        layer: L.tileLayer('https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://cycling.waymarkedtrails.org">Waymarked Trails</a>',
+            maxZoom: 18,
+            opacity: 0.7
+        })
+    }
+};
+
+let activeOverlays = {};
 
 // Use constants from configuration section above
 // const LANDAU_COORDS = DEFAULT_CENTER;
@@ -2182,14 +2361,40 @@ function changeMapType(type) {
         case 'satellite':
             currentMapLayer = mapLayers.satellite;
             break;
-        case 'streets':
-            currentMapLayer = mapLayers.streets;
+        case 'humanitarian':
+            currentMapLayer = mapLayers.humanitarian;
+            break;
+        case 'opentopomap':
+            currentMapLayer = mapLayers.opentopomap;
+            break;
+        case 'cyclosm':
+            currentMapLayer = mapLayers.cyclosm;
+            break;
+        case 'osmde':
+            currentMapLayer = mapLayers.osmde;
+            break;
+        case 'cartodb':
+            currentMapLayer = mapLayers.cartodb;
             break;
         default:
             currentMapLayer = mapLayers.standard;
     }
 
     currentMapLayer.addTo(map);
+}
+
+function toggleOverlay(overlayKey, enabled) {
+    if (enabled) {
+        if (!activeOverlays[overlayKey]) {
+            activeOverlays[overlayKey] = overlayLayers[overlayKey].layer;
+            activeOverlays[overlayKey].addTo(map);
+        }
+    } else {
+        if (activeOverlays[overlayKey]) {
+            map.removeLayer(activeOverlays[overlayKey]);
+            delete activeOverlays[overlayKey];
+        }
+    }
 }
 
 function onMapClick(e) {
@@ -2271,17 +2476,46 @@ document.addEventListener('DOMContentLoaded', function() {
     const minimizeBtn = document.getElementById('minimize-btn');
     const panelHeader = document.querySelector('.panel-header');
     
-    // Transport mode buttons
-    const walkingBtn = document.getElementById('walking');
-    const bikingBtn = document.getElementById('biking');
-    const drivingBtn = document.getElementById('driving');
+    // Transport mode buttons - removed from UI, but keeping default mode
+    const activeTransportMode = 'walking';
     
-    // Map type buttons
-    const standardMapBtn = document.getElementById('standard-map');
-    const satelliteMapBtn = document.getElementById('satellite-map');
-    const streetsMapBtn = document.getElementById('streets-map');
+    // Map type selection
+    const baseMapSelect = document.getElementById('base-map-select');
+    const overlayCheckboxesContainer = document.getElementById('overlay-checkboxes');
     
-    let activeTransportMode = 'walking';
+    // Create overlay checkboxes
+    Object.keys(overlayLayers).forEach(overlayKey => {
+        const overlayData = overlayLayers[overlayKey];
+        const checkboxWrapper = document.createElement('div');
+        checkboxWrapper.className = 'checkbox-container';
+        checkboxWrapper.style.marginBottom = '8px';
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `overlay-${overlayKey}`;
+        
+        const checkmark = document.createElement('span');
+        checkmark.className = 'checkmark';
+        
+        const label = document.createElement('span');
+        label.style.marginLeft = '5px';
+        label.textContent = overlayData.name;
+        
+        checkboxWrapper.appendChild(checkbox);
+        checkboxWrapper.appendChild(checkmark);
+        checkboxWrapper.appendChild(label);
+        
+        checkbox.addEventListener('change', function() {
+            toggleOverlay(overlayKey, this.checked);
+        });
+        
+        overlayCheckboxesContainer.appendChild(checkboxWrapper);
+    });
+    
+    // Base map selection handler
+    baseMapSelect.addEventListener('change', function() {
+        changeMapType(this.value);
+    });
     
     // Minimize/maximize panel
     panelHeader.addEventListener('click', function(e) {
@@ -2300,57 +2534,7 @@ document.addEventListener('DOMContentLoaded', function() {
         controlPanel.classList.toggle('minimized');
     }
     
-    // Map type selection
-    standardMapBtn.addEventListener('click', function() {
-        setActiveMapType('standard');
-        changeMapType('standard');
-    });
-    
-    satelliteMapBtn.addEventListener('click', function() {
-        setActiveMapType('satellite');
-        changeMapType('satellite');
-    });
-    
-    streetsMapBtn.addEventListener('click', function() {
-        setActiveMapType('streets');
-        changeMapType('streets');
-    });
-    
-    function setActiveMapType(type) {
-        // Update UI
-        [standardMapBtn, satelliteMapBtn, streetsMapBtn].forEach(btn => {
-            btn.classList.remove('active');
-        });
-        
-        document.getElementById(`${type}-map`).classList.add('active');
-    }
-    
-    // Transport mode selection
-    walkingBtn.addEventListener('click', function() {
-        setActiveMode('walking');
-        speedInput.value = transportSpeeds.walking;
-    });
-    
-    bikingBtn.addEventListener('click', function() {
-        setActiveMode('biking');
-        speedInput.value = transportSpeeds.biking;
-    });
-    
-    drivingBtn.addEventListener('click', function() {
-        setActiveMode('driving');
-        speedInput.value = transportSpeeds.driving;
-    });
-    
-    function setActiveMode(mode) {
-        activeTransportMode = mode;
-        
-        // Update UI
-        [walkingBtn, bikingBtn, drivingBtn].forEach(btn => {
-            btn.classList.remove('active');
-        });
-        
-        document.getElementById(mode).classList.add('active');
-    }
+    // Removed old map type buttons - now using dropdown
     
     // Add collapsible advanced options section
     const advancedOptionsSection = document.createElement('div');
@@ -2365,19 +2549,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 <button id="consider-obstacles" class="btn btn-secondary">Hindernisse berücksichtigen</button>
                 <p class="option-description">Berücksichtigt Flüsse, Autobahnen und andere Barrieren bei der Berechnung</p>
             </div>
-            <div class="option-group">
-                <label>Geländemodus:</label>
-                <div class="terrain-mode-buttons">
-                    <button id="all-terrain" class="btn btn-secondary active">Querfeldein</button>
-                    <button id="roads-only" class="btn btn-secondary">Nur Straßen</button>
-                </div>
-                <p class="option-description">Querfeldein: kann über Felder gehen. Nur Straßen: bleibt auf Wegen</p>
-            </div>
         </div>
     `;
     
-    // Insert after transport modes
-    document.querySelector('.transport-modes').parentNode.after(advancedOptionsSection);
+    // Insert after speed input
+    document.getElementById('speed').parentNode.parentNode.appendChild(advancedOptionsSection);
     
     // Toggle collapsible section
     document.getElementById('advanced-options-header').addEventListener('click', function() {
@@ -2412,26 +2588,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Terrain mode selection
-    const allTerrainBtn = document.getElementById('all-terrain');
-    const roadsOnlyBtn = document.getElementById('roads-only');
-    let useRoadsOnly = false;
-    
-    allTerrainBtn.addEventListener('click', function() {
-        if (!this.classList.contains('active')) {
-            this.classList.add('active');
-            roadsOnlyBtn.classList.remove('active');
-            useRoadsOnly = false;
-        }
-    });
-    
-    roadsOnlyBtn.addEventListener('click', function() {
-        if (!this.classList.contains('active')) {
-            this.classList.add('active');
-            allTerrainBtn.classList.remove('active');
-            useRoadsOnly = true;
-        }
-    });
+    // Default terrain mode - always using roads/paths (not cross-country)
+    const useRoadsOnly = true;
     
     // Calculate radius button
     calculateBtn.addEventListener('click', async function() {
@@ -2488,8 +2646,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const color = getRandomColor();
                 
                 // Create description
-                const terrainModeText = useRoadsOnly ? 'Nur Straßen' : 'Querfeldein';
-                let description = `${speed.toFixed(1)} km/h für ${time} Min. (${terrainModeText})`;
+                let description = `${speed.toFixed(1)} km/h für ${time} Min.`;
                 
                 // Add area if available
                 if (searchArea.features[0].properties && searchArea.features[0].properties.area) {
@@ -2508,8 +2665,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         color: color,
                         weight: 3,
                         fillColor: color,
-                        fillOpacity: 0.2,
-                        dashArray: useRoadsOnly ? '5, 5' : ''  // Dashed line for "Roads Only"
+                        fillOpacity: 0.2
                     }
                 }).addTo(map);
                 
@@ -2521,7 +2677,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     circle: searchAreaLayer, 
                     description, 
                     isAdvanced: true,
-                    terrainMode: terrainModeText,
                     isFallback: isFallback
                 };
                 
@@ -2604,17 +2759,9 @@ document.addEventListener('DOMContentLoaded', function() {
             color = '#3388ff'; // Default color
         }
         
-        // Show icon depending on terrain mode
-        let terrainIcon = '';
-        if (circleObj.isAdvanced) {
-            terrainIcon = circleObj.terrainMode === 'Nur Straßen' 
-                ? '<i class="fas fa-road" title="Nur Straßen"></i> ' 
-                : '<i class="fas fa-mountain" title="Querfeldein"></i> ';
-        }
-        
         li.innerHTML = `
             <span class="color-box" style="background-color: ${color}"></span>
-            ${terrainIcon}${circleObj.description}
+            ${circleObj.description}
             <button class="delete-btn" data-index="${index}">×</button>
         `;
         
@@ -2785,6 +2932,66 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('KML Layer Manager initialized');
                 }
             }, 100);
+        });
+        
+        // =====================================================================
+        // FULLSCREEN FUNCTIONALITY
+        // =====================================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            const fullscreenBtn = document.getElementById('fullscreen-btn');
+            const fullscreenContainer = document.getElementById('fullscreen-container');
+            
+            // Toggle fullscreen
+            fullscreenBtn.addEventListener('click', function() {
+                if (!document.fullscreenElement && !document.webkitFullscreenElement && 
+                    !document.mozFullScreenElement && !document.msFullscreenElement) {
+                    // Enter fullscreen
+                    if (fullscreenContainer.requestFullscreen) {
+                        fullscreenContainer.requestFullscreen();
+                    } else if (fullscreenContainer.webkitRequestFullscreen) {
+                        fullscreenContainer.webkitRequestFullscreen();
+                    } else if (fullscreenContainer.mozRequestFullScreen) {
+                        fullscreenContainer.mozRequestFullScreen();
+                    } else if (fullscreenContainer.msRequestFullscreen) {
+                        fullscreenContainer.msRequestFullscreen();
+                    }
+                } else {
+                    // Exit fullscreen
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    } else if (document.mozCancelFullScreen) {
+                        document.mozCancelFullScreen();
+                    } else if (document.msExitFullscreen) {
+                        document.msExitFullscreen();
+                    }
+                }
+            });
+            
+            // Update button icon when fullscreen changes
+            function updateFullscreenButton() {
+                const icon = fullscreenBtn.querySelector('i');
+                if (document.fullscreenElement || document.webkitFullscreenElement || 
+                    document.mozFullScreenElement || document.msFullscreenElement) {
+                    icon.className = 'fa fa-compress';
+                    fullscreenBtn.title = 'Vollbildmodus beenden';
+                } else {
+                    icon.className = 'fa fa-expand';
+                    fullscreenBtn.title = 'Vollbildmodus';
+                }
+                
+                // Force map to redraw after fullscreen change
+                if (typeof map !== 'undefined' && map) {
+                    setTimeout(() => map.invalidateSize(), 100);
+                }
+            }
+            
+            // Listen for fullscreen changes
+            document.addEventListener('fullscreenchange', updateFullscreenButton);
+            document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+            document.addEventListener('mozfullscreenchange', updateFullscreenButton);
+            document.addEventListener('MSFullscreenChange', updateFullscreenButton);
         });
     </script>
 </body>
