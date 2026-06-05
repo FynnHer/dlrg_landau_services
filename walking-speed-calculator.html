@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gehgeschwindigkeit-Rechner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f4f1ec;
+    --surface: #fffefa;
+    --surface2: #f0ede6;
+    --border: rgba(60,50,30,0.12);
+    --text: #1c1a14;
+    --text-muted: #8a8070;
+    --accent: #2d6a4f;
+    --accent-light: #d8f3dc;
+    --warn: #b5451b;
+    --warn-light: #fdebd0;
+    --neutral: #e9e5dc;
+    --radius: 10px;
+    --font: 'DM Sans', sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 680px;
+    overflow: hidden;
+    box-shadow: 0 2px 32px rgba(0,0,0,0.07);
+  }
+
+  .card-header {
+    padding: 1.75rem 2rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .card-header h1 {
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+
+  .card-header p {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 3px;
+    font-weight: 300;
+  }
+
+  .card-body { padding: 1.5rem 2rem; }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    margin-top: 1.5rem;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  .control-row {
+    display: grid;
+    grid-template-columns: 150px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .control-row label {
+    font-size: 14px;
+    color: var(--text);
+    font-weight: 400;
+  }
+
+  .control-row .val {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+    min-width: 70px;
+    text-align: right;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--neutral);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--surface);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    transition: transform 0.15s;
+  }
+
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+
+  input[type=range]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--surface);
+  }
+
+  select {
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--surface2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a8070' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 7px 32px 7px 12px;
+    font-size: 13px;
+    font-family: var(--font);
+    color: var(--text);
+    cursor: pointer;
+    width: 100%;
+    grid-column: 2 / 4;
+  }
+
+  select:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 1.5rem 0;
+  }
+
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (max-width: 500px) {
+    .result-grid { grid-template-columns: repeat(2, 1fr); }
+    .control-row { grid-template-columns: 120px 1fr auto; }
+  }
+
+  .metric {
+    background: var(--surface2);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+  }
+
+  .metric .mlabel {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    font-weight: 400;
+  }
+
+  .metric .mval {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .metric .munit {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 3px;
+  }
+
+  .metric.highlight {
+    background: var(--accent-light);
+    border-color: rgba(45,106,79,0.2);
+  }
+
+  .metric.highlight .mval { color: var(--accent); }
+
+  .factor-section-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  .factor-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .factor-name {
+    font-size: 12px;
+    color: var(--text-muted);
+    min-width: 110px;
+  }
+
+  .bar-bg {
+    flex: 1;
+    height: 5px;
+    background: var(--neutral);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.35s ease;
+  }
+
+  .factor-pct {
+    font-family: var(--mono);
+    font-size: 11px;
+    min-width: 46px;
+    text-align: right;
+    color: var(--text);
+  }
+
+  .formula-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.8;
+  }
+
+  .formula-box span.hi { color: var(--accent); font-weight: 500; }
+  .formula-box span.base { color: var(--text); }
+
+  .footer-note {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="card-header">
+    <h1>Gehgeschwindigkeit-Rechner</h1>
+    <p>Empirisches Schätzmodell auf Basis wissenschaftlicher Studiendaten</p>
+  </div>
+
+  <div class="card-body">
+
+    <div class="section-label">Wetter</div>
+
+    <div class="control-row">
+      <label>Temperatur</label>
+      <input type="range" id="temp" min="-15" max="40" value="18" step="1">
+      <span class="val" id="temp-out">18 °C</span>
+    </div>
+
+    <div class="control-row">
+      <label>Wind</label>
+      <input type="range" id="wind" min="0" max="80" value="10" step="1">
+      <span class="val" id="wind-out">10 km/h</span>
+    </div>
+
+    <div class="control-row">
+      <label>Niederschlag</label>
+      <select id="rain">
+        <option value="0">Trocken</option>
+        <option value="1">Leichter Regen</option>
+        <option value="2">Starkregen</option>
+        <option value="3">Schnee / Eis</option>
+      </select>
+    </div>
+
+    <div class="section-label">Person &amp; Situation</div>
+
+    <div class="control-row">
+      <label>Alter</label>
+      <input type="range" id="age" min="10" max="85" value="35" step="1">
+      <span class="val" id="age-out">35 J.</span>
+    </div>
+
+    <div class="control-row">
+      <label>Tageszeit</label>
+      <select id="daytime">
+        <option value="morning">Morgens — Berufsverkehr (7–9 Uhr)</option>
+        <option value="midday" selected>Mittags (11–14 Uhr)</option>
+        <option value="afternoon">Nachmittags (15–18 Uhr)</option>
+        <option value="evening">Abends (19–22 Uhr)</option>
+        <option value="night">Nachts (23–6 Uhr)</option>
+      </select>
+    </div>
+
+    <div class="control-row">
+      <label>Eile</label>
+      <select id="urgency">
+        <option value="0">Kein Zeitdruck</option>
+        <option value="1" selected>Normal</option>
+        <option value="2">Eile / Zeitdruck</option>
+      </select>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="result-grid">
+      <div class="metric highlight">
+        <div class="mlabel">Geschwindigkeit</div>
+        <div class="mval" id="res-ms">1.34</div>
+        <div class="munit">m/s</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Umgerechnet</div>
+        <div class="mval" id="res-kmh">4.8</div>
+        <div class="munit">km/h</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">100 m in</div>
+        <div class="mval" id="res-100m">1:15</div>
+        <div class="munit">min:sek</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">1 km in</div>
+        <div class="mval" id="res-1km">12:27</div>
+        <div class="munit">min:sek</div>
+      </div>
+    </div>
+
+    <div class="factor-section-label">Einfluss der Faktoren</div>
+    <div id="factors"></div>
+
+    <div class="divider"></div>
+
+    <div class="factor-section-label">Formel</div>
+    <div class="formula-box" id="formula-display">
+      v = 1.34 × (1 + <span class="hi">fT</span> + <span class="hi">fR</span> + <span class="hi">fW</span> + <span class="hi">fZ</span> + <span class="hi">fE</span> + <span class="hi">fA</span>)
+    </div>
+
+    <div class="footer-note">
+      Basiswert 1,34 m/s gemäß WHO &amp; Verkehrsplanung (gesunder Erwachsener, neutral). Korrekturfaktoren nach empirischen Studien: Fan et al. (2022), Aultman-Hall et al. (2009), Kimura et al. (2015). Individuelle Abweichung ±30 % möglich.
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function fmtTime(s) {
+    const m = Math.floor(s / 60);
+    const sec = Math.round(s % 60);
+    return m + ':' + String(sec).padStart(2, '0');
+  }
+
+  function calcSpeed() {
+    const temp     = +document.getElementById('temp').value;
+    const rain     = +document.getElementById('rain').value;
+    const wind     = +document.getElementById('wind').value;
+    const daytime  = document.getElementById('daytime').value;
+    const urgency  = +document.getElementById('urgency').value;
+    const age      = +document.getElementById('age').value;
+
+    const base = 1.34;
+
+    let fT = temp < 0 ? 0.10 : temp < 10 ? 0.05 : temp <= 25 ? 0 : temp <= 32 ? 0.04 : 0.07;
+    const fR = [0, -0.04, -0.08, -0.15][rain];
+    const fW = wind > 20 ? -0.015 * Math.min((wind - 20) / 10, 3) : 0;
+    const fZ = { morning: 0.07, midday: 0, afternoon: 0.02, evening: -0.02, night: -0.06 }[daytime];
+    const fE = [0, 0, 0.17][urgency];
+    const fA = age < 20 ? -0.05 : age <= 50 ? 0 : age <= 65 ? -0.06 : -0.15 - 0.003 * (age - 65);
+
+    const v = Math.max(0.4, base * (1 + fT + fR + fW + fZ + fE + fA));
+
+    document.getElementById('res-ms').textContent  = v.toFixed(2);
+    document.getElementById('res-kmh').textContent = (v * 3.6).toFixed(1);
+    document.getElementById('res-100m').textContent = fmtTime(100 / v);
+    document.getElementById('res-1km').textContent  = fmtTime(1000 / v);
+
+    const factors = [
+      { name: 'Temperatur', v: fT },
+      { name: 'Niederschlag', v: fR },
+      { name: 'Wind', v: fW },
+      { name: 'Tageszeit', v: fZ },
+      { name: 'Eile', v: fE },
+      { name: 'Alter', v: fA },
+    ];
+
+    document.getElementById('factors').innerHTML = factors.map(f => {
+      const pct = Math.abs(f.v) * 100;
+      const color = f.v >= 0 ? '#2d6a4f' : '#b5451b';
+      const sign = f.v > 0 ? '+' : '';
+      return `<div class="factor-row">
+        <span class="factor-name">${f.name}</span>
+        <div class="bar-bg"><div class="bar-fill" style="width:${Math.min(pct * 5, 100)}%;background:${color}"></div></div>
+        <span class="factor-pct" style="color:${color}">${sign}${Math.round(f.v * 100)} %</span>
+      </div>`;
+    }).join('');
+
+    const fmtF = f => (f >= 0 ? '+' : '') + f.toFixed(3);
+    document.getElementById('formula-display').innerHTML =
+      `<span class="base">v = 1.34 × (1 ${fmtF(fT)} ${fmtF(fR)} ${fmtF(fW)} ${fmtF(fZ)} ${fmtF(fE)} ${fmtF(fA)})</span><br>` +
+      `<span class="base">  = <strong style="color:var(--accent)">${v.toFixed(3)} m/s</strong></span>`;
+  }
+
+  ['temp','wind','age'].forEach(id => {
+    const el  = document.getElementById(id);
+    const out = document.getElementById(id + '-out');
+    el.addEventListener('input', () => {
+      if (id === 'temp')  out.textContent = el.value + ' °C';
+      if (id === 'wind')  out.textContent = el.value + ' km/h';
+      if (id === 'age')   out.textContent = el.value + ' J.';
+      calcSpeed();
+    });
+  });
+
+  ['rain','daytime','urgency'].forEach(id =>
+    document.getElementById(id).addEventListener('change', calcSpeed)
+  );
+
+  calcSpeed();
+</script>
+</body>
+</html>

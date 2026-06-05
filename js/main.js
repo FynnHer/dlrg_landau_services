@@ -94,22 +94,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const advancedOptionsSection = document.createElement('div');
     advancedOptionsSection.className = 'collapsible-section';
     advancedOptionsSection.innerHTML = `
-        <div class="section-header" id="advanced-options-header">
-            <h3>Erweiterte Optionen</h3>
-            <span class="toggle-icon">▼</span>
-        </div>
-        <div class="section-content" id="advanced-options-content">
+        <div id="spacer" style="height: 20px;"></div>
+        <div id="advanced-options-content">
             <div class="option-group">
-                <button id="consider-obstacles" class="btn btn-secondary">Hindernisse berücksichtigen</button>
+                <button id="consider-obstacles" class="btn btn-active btn-secondary">Hindernisse werden berücksichtigt</button>
                 <p class="option-description">Berücksichtigt Flüsse, Autobahnen und andere Barrieren bei der Berechnung</p>
-            </div>
-            <div class="option-group">
-                <label>Geländemodus:</label>
-                <div class="terrain-mode-buttons">
-                    <button id="all-terrain" class="btn btn-secondary active">Querfeldein</button>
-                    <button id="roads-only" class="btn btn-secondary">Nur Straßen</button>
-                </div>
-                <p class="option-description">Querfeldein: kann über Felder gehen. Nur Straßen: bleibt auf Wegen</p>
             </div>
         </div>
     `;
@@ -136,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Consider obstacles button handler
     const obstaclesBtn = document.getElementById('consider-obstacles');
-    let obstaclesEnabled = false;
+    let obstaclesEnabled = true; // Default to enabled
     
     obstaclesBtn.addEventListener('click', function() {
         obstaclesEnabled = !obstaclesEnabled;
