@@ -23,12 +23,12 @@ const mapLayers = {
 };
 
 // Coordinates for Landau in der Pfalz
-const LANDAU_COORDS = [49.1983, 8.1172];
-const DEFAULT_ZOOM = 13;
+const START_CORDS = [51.0, 10.3];
+const DEFAULT_ZOOM = 7;
 
 function initMap() {
     // Initialize the map centered on Landau in der Pfalz
-    map = L.map('map').setView(LANDAU_COORDS, DEFAULT_ZOOM);
+    map = L.map('map').setView(START_CORDS, DEFAULT_ZOOM);
 
     // Set the default map layer (standard)
     currentMapLayer = mapLayers.standard;
