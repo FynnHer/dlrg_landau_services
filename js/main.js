@@ -94,11 +94,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const advancedOptionsSection = document.createElement('div');
     advancedOptionsSection.className = 'collapsible-section';
     advancedOptionsSection.innerHTML = `
-        <div id="spacer" style="height: 20px;"></div>
-        <div id="advanced-options-content">
+        <div class="section-header" id="advanced-options-header">
+            <h3>Erweiterte Optionen</h3>
+            <span class="toggle-icon">▼</span>
+        </div>
+        <div class="section-content" id="advanced-options-content">
             <div class="option-group">
                 <button id="consider-obstacles" class="btn btn-active btn-secondary">Hindernisse werden berücksichtigt</button>
-                <p class="option-description">Berücksichtigt Flüsse, Autobahnen und andere Barrieren bei der Berechnung</p>
+                <p class="option-description">Flüsse, Autobahnen und andere Barrieren werden in der Berechnung einbezogen.</p>
+            </div>
+            <div class="option-group">
+                <button id="open-calculator-btn" class="btn btn-secondary calculator-launch-btn" type="button">Gehgeschwindigkeit-Rechner öffnen</button>
+                <p class="option-description">Öffnet den Rechner in einem Popup, damit das Panel übersichtlich bleibt.</p>
             </div>
         </div>
     `;
@@ -122,6 +129,87 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize the isochrone service
     const isochroneService = new IsochroneService();
+
+    // Walking speed calculator popup
+    const calculatorOverlay = document.createElement('div');
+    calculatorOverlay.className = 'calculator-overlay';
+    calculatorOverlay.innerHTML = `
+        <div class="calculator-modal" role="dialog" aria-modal="true" aria-labelledby="calculator-title">
+            <div class="calculator-modal__header">
+                <div>
+                    <h3 id="calculator-title">Gehgeschwindigkeit-Rechner</h3>
+                    <p>Berechneten km/h-Wert direkt in das Geschwindigkeitsfeld übernehmen.</p>
+                </div>
+                <button type="button" class="calculator-close-btn" id="close-calculator-btn" aria-label="Rechner schließen">×</button>
+            </div>
+            <div class="calculator-modal__body">
+                <iframe src="walking-speed-calculator.html" title="Walking Speed Calculator" class="calculator-iframe"></iframe>
+            </div>
+            <div class="calculator-modal__footer">
+                <button type="button" id="apply-calculator-speed-btn" class="btn btn-active calculator-apply-btn" disabled>Wert übernehmen</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(calculatorOverlay);
+
+    const openCalculatorBtn = document.getElementById('open-calculator-btn');
+    const closeCalculatorBtn = document.getElementById('close-calculator-btn');
+    const applyCalculatorSpeedBtn = document.getElementById('apply-calculator-speed-btn');
+    const calculatorIframe = calculatorOverlay.querySelector('iframe');
+    let latestCalculatorSpeed = null;
+
+    function openCalculator() {
+        calculatorOverlay.classList.add('is-open');
+    }
+
+    function closeCalculator() {
+        calculatorOverlay.classList.remove('is-open');
+    }
+
+    openCalculatorBtn.addEventListener('click', openCalculator);
+    closeCalculatorBtn.addEventListener('click', closeCalculator);
+    calculatorOverlay.addEventListener('click', function(event) {
+        if (event.target === calculatorOverlay) {
+            closeCalculator();
+        }
+    });
+
+    window.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && calculatorOverlay.classList.contains('is-open')) {
+            closeCalculator();
+        }
+    });
+
+    window.addEventListener('message', function(event) {
+        if (event.source !== calculatorIframe.contentWindow) {
+            return;
+        }
+
+        if (!event.data || event.data.type !== 'walking-speed-calculator:update') {
+            return;
+        }
+
+        const parsedSpeed = Number(event.data.speedKmh);
+        if (Number.isFinite(parsedSpeed)) {
+            latestCalculatorSpeed = parsedSpeed;
+            applyCalculatorSpeedBtn.disabled = false;
+            applyCalculatorSpeedBtn.textContent = `Wert übernehmen (${parsedSpeed.toFixed(1)} km/h)`;
+        }
+    });
+
+    applyCalculatorSpeedBtn.addEventListener('click', function() {
+        if (latestCalculatorSpeed === null) {
+            return;
+        }
+
+        speedInput.value = latestCalculatorSpeed.toFixed(1);
+        applyCalculatorSpeedBtn.textContent = 'Wert übernommen';
+        setTimeout(() => {
+            if (latestCalculatorSpeed !== null) {
+                applyCalculatorSpeedBtn.textContent = `Wert übernehmen (${latestCalculatorSpeed.toFixed(1)} km/h)`;
+            }
+        }, 1200);
+    });
     
     // Consider obstacles button handler
     const obstaclesBtn = document.getElementById('consider-obstacles');
@@ -136,27 +224,6 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             this.classList.remove('btn-active');
             this.textContent = 'Hindernisse berücksichtigen';
-        }
-    });
-    
-    // Terrain mode selection
-    const allTerrainBtn = document.getElementById('all-terrain');
-    const roadsOnlyBtn = document.getElementById('roads-only');
-    let useRoadsOnly = false;
-    
-    allTerrainBtn.addEventListener('click', function() {
-        if (!this.classList.contains('active')) {
-            this.classList.add('active');
-            roadsOnlyBtn.classList.remove('active');
-            useRoadsOnly = false;
-        }
-    });
-    
-    roadsOnlyBtn.addEventListener('click', function() {
-        if (!this.classList.contains('active')) {
-            this.classList.add('active');
-            allTerrainBtn.classList.remove('active');
-            useRoadsOnly = true;
         }
     });
     
@@ -190,15 +257,14 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             if (obstaclesEnabled) {
-                console.log(`Calculating with obstacles: mode=${transportMode}, speed=${speed}, time=${time}, roadsOnly=${useRoadsOnly}`);
+                console.log(`Calculating with obstacles: mode=${transportMode}, speed=${speed}, time=${time}`);
                 
                 // Generate search area with obstacles
                 const searchArea = await isochroneService.generateSearchArea(
                     selectedPoint,
                     speed,
                     time,
-                    transportMode,
-                    useRoadsOnly
+                    transportMode
                 );
                 
                 // Check if result is a fallback circle
@@ -215,8 +281,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const color = getRandomColor();
                 
                 // Create description
-                const terrainModeText = useRoadsOnly ? 'Nur Straßen' : 'Querfeldein';
-                let description = `${speed.toFixed(1)} km/h für ${time} Min. (${terrainModeText})`;
+                let description = `${speed.toFixed(1)} km/h für ${time} Min. mit Hindernissen`;
                 
                 // Add area if available
                 if (searchArea.features[0].properties && searchArea.features[0].properties.area) {
@@ -248,7 +313,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     circle: searchAreaLayer, 
                     description, 
                     isAdvanced: true,
-                    terrainMode: terrainModeText,
                     isFallback: isFallback
                 };
                 

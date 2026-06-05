@@ -386,6 +386,139 @@ body, html {
     margin-bottom: 8px;
 }
 
+.calculator-launch-btn {
+    width: 100%;
+}
+
+.calculator-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(12, 18, 28, 0.58);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 5000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+}
+
+.calculator-overlay.is-open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.calculator-modal {
+    width: min(920px, 100%);
+    max-height: min(92vh, 920px);
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.calculator-modal__header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 16px 18px;
+    border-bottom: 1px solid #e6e6e6;
+    background: linear-gradient(180deg, #fbfbfb 0%, #f4f7fb 100%);
+}
+
+.calculator-modal__header h3 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.calculator-modal__header p {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: #666;
+}
+
+.calculator-close-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 10px;
+    background: #f2f4f7;
+    color: #334155;
+    cursor: pointer;
+    font-size: 24px;
+    line-height: 1;
+    flex: 0 0 auto;
+}
+
+.calculator-modal__body {
+    padding: 12px;
+    background: #eef2f7;
+    flex: 1;
+    min-height: 0;
+}
+
+.calculator-iframe {
+    display: block;
+    width: 100%;
+    height: min(78vh, 760px);
+    min-height: 560px;
+    border: 0;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.calculator-modal__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 18px 18px;
+    border-top: 1px solid #e6e6e6;
+    background: #ffffff;
+}
+
+.calculator-apply-btn {
+    width: auto;
+    min-width: 220px;
+}
+
+@media (max-width: 700px) {
+    .calculator-modal {
+        max-height: 94vh;
+    }
+
+    .calculator-iframe {
+        min-height: 500px;
+        height: min(70vh, 680px);
+    }
+
+    .calculator-apply-btn {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .calculator-overlay {
+        padding: 8px;
+    }
+
+    .calculator-modal__header,
+    .calculator-modal__footer {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    .calculator-iframe {
+        min-height: 440px;
+        height: min(66vh, 620px);
+    }
+}
+
 /* POI markers */
 .poi-icon-container {
     background: none;

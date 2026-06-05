@@ -19,7 +19,6 @@
     --accent: #2d6a4f;
     --accent-light: #d8f3dc;
     --warn: #b5451b;
-    --warn-light: #fdebd0;
     --neutral: #e9e5dc;
     --radius: 10px;
     --font: 'DM Sans', sans-serif;
@@ -129,8 +128,7 @@
   input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
 
   input[type=range]::-moz-range-thumb {
-    width: 18px;
-    height: 18px;
+    width: 18px; height: 18px;
     border-radius: 50%;
     background: var(--accent);
     cursor: pointer;
@@ -154,11 +152,7 @@
 
   select:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  .divider {
-    height: 1px;
-    background: var(--border);
-    margin: 1.5rem 0;
-  }
+  .divider { height: 1px; background: var(--border); margin: 1.5rem 0; }
 
   .result-grid {
     display: grid;
@@ -179,77 +173,23 @@
     border: 1px solid var(--border);
   }
 
-  .metric .mlabel {
-    font-size: 11px;
-    color: var(--text-muted);
-    margin-bottom: 5px;
-    font-weight: 400;
-  }
+  .metric .mlabel { font-size: 11px; color: var(--text-muted); margin-bottom: 5px; }
+  .metric .mval { font-family: var(--mono); font-size: 20px; font-weight: 500; color: var(--text); line-height: 1; }
+  .metric .munit { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
 
-  .metric .mval {
-    font-family: var(--mono);
-    font-size: 20px;
-    font-weight: 500;
-    color: var(--text);
-    line-height: 1;
-  }
-
-  .metric .munit {
-    font-size: 11px;
-    color: var(--text-muted);
-    margin-top: 3px;
-  }
-
-  .metric.highlight {
-    background: var(--accent-light);
-    border-color: rgba(45,106,79,0.2);
-  }
-
+  .metric.highlight { background: var(--accent-light); border-color: rgba(45,106,79,0.2); }
   .metric.highlight .mval { color: var(--accent); }
 
   .factor-section-label {
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    margin-bottom: 10px;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px;
   }
 
-  .factor-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-  }
-
-  .factor-name {
-    font-size: 12px;
-    color: var(--text-muted);
-    min-width: 110px;
-  }
-
-  .bar-bg {
-    flex: 1;
-    height: 5px;
-    background: var(--neutral);
-    border-radius: 3px;
-    overflow: hidden;
-  }
-
-  .bar-fill {
-    height: 100%;
-    border-radius: 3px;
-    transition: width 0.35s ease;
-  }
-
-  .factor-pct {
-    font-family: var(--mono);
-    font-size: 11px;
-    min-width: 46px;
-    text-align: right;
-    color: var(--text);
-  }
+  .factor-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .factor-name { font-size: 12px; color: var(--text-muted); min-width: 110px; }
+  .bar-bg { flex: 1; height: 5px; background: var(--neutral); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width 0.35s ease; }
+  .factor-pct { font-family: var(--mono); font-size: 11px; min-width: 46px; text-align: right; color: var(--text); }
 
   .formula-box {
     background: var(--surface2);
@@ -263,23 +203,24 @@
   }
 
   .formula-box span.hi { color: var(--accent); font-weight: 500; }
-  .formula-box span.base { color: var(--text); }
 
-  .footer-note {
+  .sources {
     font-size: 11px;
     color: var(--text-muted);
-    line-height: 1.6;
+    line-height: 1.7;
     margin-top: 1.25rem;
     padding-top: 1rem;
     border-top: 1px solid var(--border);
   }
+
+  .sources b { color: var(--text); font-weight: 500; }
 </style>
 </head>
 <body>
 <div class="card">
   <div class="card-header">
     <h1>Gehgeschwindigkeit-Rechner</h1>
-    <p>Empirisches Schätzmodell auf Basis wissenschaftlicher Studiendaten</p>
+    <p>Empirisches Modell auf Basis peer-reviewter Studiendaten</p>
   </div>
 
   <div class="card-body">
@@ -288,8 +229,8 @@
 
     <div class="control-row">
       <label>Temperatur</label>
-      <input type="range" id="temp" min="-15" max="40" value="18" step="1">
-      <span class="val" id="temp-out">18 °C</span>
+      <input type="range" id="temp" min="-15" max="35" value="15" step="1">
+      <span class="val" id="temp-out">15 °C</span>
     </div>
 
     <div class="control-row">
@@ -304,7 +245,7 @@
         <option value="0">Trocken</option>
         <option value="1">Leichter Regen</option>
         <option value="2">Starkregen</option>
-        <option value="3">Schnee / Eis</option>
+        <option value="3">Schnee / Eis (−0,10 m/s)</option>
       </select>
     </div>
 
@@ -319,10 +260,10 @@
     <div class="control-row">
       <label>Tageszeit</label>
       <select id="daytime">
-        <option value="morning">Morgens — Berufsverkehr (7–9 Uhr)</option>
+        <option value="morning">Morgens — Berufsverkehr (6–9 Uhr)</option>
         <option value="midday" selected>Mittags (11–14 Uhr)</option>
         <option value="afternoon">Nachmittags (15–18 Uhr)</option>
-        <option value="evening">Abends (19–22 Uhr)</option>
+        <option value="evening">Abends / 18–19 Uhr (+0,06 m/s)</option>
         <option value="night">Nachts (23–6 Uhr)</option>
       </select>
     </div>
@@ -341,22 +282,22 @@
     <div class="result-grid">
       <div class="metric highlight">
         <div class="mlabel">Geschwindigkeit</div>
-        <div class="mval" id="res-ms">1.34</div>
+        <div class="mval" id="res-ms">–</div>
         <div class="munit">m/s</div>
       </div>
       <div class="metric">
         <div class="mlabel">Umgerechnet</div>
-        <div class="mval" id="res-kmh">4.8</div>
+        <div class="mval" id="res-kmh">–</div>
         <div class="munit">km/h</div>
       </div>
       <div class="metric">
         <div class="mlabel">100 m in</div>
-        <div class="mval" id="res-100m">1:15</div>
+        <div class="mval" id="res-100m">–</div>
         <div class="munit">min:sek</div>
       </div>
       <div class="metric">
         <div class="mlabel">1 km in</div>
-        <div class="mval" id="res-1km">12:27</div>
+        <div class="mval" id="res-1km">–</div>
         <div class="munit">min:sek</div>
       </div>
     </div>
@@ -366,82 +307,153 @@
 
     <div class="divider"></div>
 
-    <div class="factor-section-label">Formel</div>
-    <div class="formula-box" id="formula-display">
-      v = 1.34 × (1 + <span class="hi">fT</span> + <span class="hi">fR</span> + <span class="hi">fW</span> + <span class="hi">fZ</span> + <span class="hi">fE</span> + <span class="hi">fA</span>)
-    </div>
+    <div class="factor-section-label">Berechnung</div>
+    <div class="formula-box" id="formula-display"></div>
 
-    <div class="footer-note">
-      Basiswert 1,34 m/s gemäß WHO &amp; Verkehrsplanung (gesunder Erwachsener, neutral). Korrekturfaktoren nach empirischen Studien: Fan et al. (2022), Aultman-Hall et al. (2009), Kimura et al. (2015). Individuelle Abweichung ±30 % möglich.
+    <div class="sources">
+      <b>Quellen &amp; Methodik</b><br>
+      Basiswert und Temperaturkurve: <b>Gupta, Li &amp; Fernie (2008)</b> — direkte Feldmessungen in Toronto bei −15 °C bis +25 °C (n=563). Interpolation zwischen gemessenen Stützpunkten: 1,44 m/s (−15 °C) → 1,35 m/s (+5 °C) → 1,23 m/s (+15 °C) → 1,28 m/s (+25 °C) → weiter monoton fallend bis ~1,10 m/s bei +35 °C.<br><br>
+      Schnee/Eis −0,102 m/s: <b>Liang et al. (2020)</b>, ScienceDirect. · Jahreszeit/Sommer langsamer: <b>Obuchi et al. (2021)</b>, Scientific Reports, n=1065. · Tageszeit (Abend schneller): Gupta et al. (2008). · Altersfaktor: gängige Literaturwerte (HCM 2010). · Windfaktor: lineare Extrapolation ab 20 km/h. · Eilefaktor: Hanking &amp; Robertson (1958); ~+17 %. · Individuelle Streuung ±0,31 m/s (1σ) laut Gupta et al.
     </div>
 
   </div>
 </div>
 
 <script>
+  // Temperatur-Stützpunkte aus Gupta et al. (2008) — direkte Messwerte
+  // Interpolation zwischen gemessenen Punkten; extrapoliert für >25°C monoton fallend
+  const tempTable = [
+    [-15, 1.43],
+    [ -5, 1.44],
+    [  5, 1.35],
+    [ 15, 1.23],
+    [ 25, 1.28],  // leichter Anstieg laut Gupta — aber nur bis 25°C gemessen
+    [ 35, 1.10],  // extrapoliert: Hitze verlangsamt weiter (Obuchi 2021, physiologisch)
+  ];
+
+  function interpTemp(t) {
+    if (t <= tempTable[0][0]) return tempTable[0][1];
+    if (t >= tempTable[tempTable.length-1][0]) return tempTable[tempTable.length-1][1];
+    for (let i = 0; i < tempTable.length - 1; i++) {
+      const [t0, v0] = tempTable[i];
+      const [t1, v1] = tempTable[i+1];
+      if (t >= t0 && t <= t1) {
+        const frac = (t - t0) / (t1 - t0);
+        return v0 + frac * (v1 - v0);
+      }
+    }
+    return 1.34;
+  }
+
   function fmtTime(s) {
     const m = Math.floor(s / 60);
     const sec = Math.round(s % 60);
     return m + ':' + String(sec).padStart(2, '0');
   }
 
+  function fmtDelta(v) {
+    const sign = v >= 0 ? '+' : '';
+    return sign + v.toFixed(3);
+  }
+
   function calcSpeed() {
-    const temp     = +document.getElementById('temp').value;
-    const rain     = +document.getElementById('rain').value;
-    const wind     = +document.getElementById('wind').value;
-    const daytime  = document.getElementById('daytime').value;
-    const urgency  = +document.getElementById('urgency').value;
-    const age      = +document.getElementById('age').value;
+    const temp    = +document.getElementById('temp').value;
+    const rain    = +document.getElementById('rain').value;
+    const wind    = +document.getElementById('wind').value;
+    const daytime = document.getElementById('daytime').value;
+    const urgency = +document.getElementById('urgency').value;
+    const age     = +document.getElementById('age').value;
 
-    const base = 1.34;
+    // Basisgeschwindigkeit aus Temperatur (Gupta-Kurve)
+    const vTemp = interpTemp(temp);
 
-    let fT = temp < 0 ? 0.10 : temp < 10 ? 0.05 : temp <= 25 ? 0 : temp <= 32 ? 0.04 : 0.07;
-    const fR = [0, -0.04, -0.08, -0.15][rain];
-    const fW = wind > 20 ? -0.015 * Math.min((wind - 20) / 10, 3) : 0;
-    const fZ = { morning: 0.07, midday: 0, afternoon: 0.02, evening: -0.02, night: -0.06 }[daytime];
-    const fE = [0, 0, 0.17][urgency];
-    const fA = age < 20 ? -0.05 : age <= 50 ? 0 : age <= 65 ? -0.06 : -0.15 - 0.003 * (age - 65);
+    // Niederschlag (Aultman-Hall + Liang): Regen relativ, Schnee absolut
+    // Leichter Regen: −4%, Starkregen: −8%, Schnee/Eis: −0.102 m/s absolut (Liang 2020)
+    const rainDeltas = [0, -0.04, -0.08, 0]; // Schnee separat
+    let rainDelta = rain === 3 ? -0.102 : vTemp * rainDeltas[rain];
 
-    const v = Math.max(0.4, base * (1 + fT + fR + fW + fZ + fE + fA));
+    // Wind: ab 20 km/h Bremseffekt, max −0.045 m/s bei Sturm
+    const windDelta = wind > 20 ? -0.015 * Math.min((wind - 20) / 10, 3) : 0;
 
-    document.getElementById('res-ms').textContent  = v.toFixed(2);
-    document.getElementById('res-kmh').textContent = (v * 3.6).toFixed(1);
+    // Tageszeit (Gupta 2008: 18–19 Uhr deutlich schneller)
+    const daytimeDeltas = {
+      morning:   0.00,
+      midday:    0.00,
+      afternoon: 0.02,
+      evening:   0.06,  // Gupta: 1.41 m/s abends vs 1.35 m/s mittags
+      night:    -0.08,
+    };
+    const daytimeDelta = daytimeDeltas[daytime];
+
+    // Eile: +17% (Hanking & Robertson)
+    const urgencyMultipliers = [0.92, 1.0, 1.17];
+    const urgencyMult = urgencyMultipliers[urgency];
+
+    // Alter (HCM 2010 Literaturnäherung)
+    let ageDelta = 0;
+    if (age < 20)       ageDelta = -0.05;
+    else if (age <= 50) ageDelta =  0.00;
+    else if (age <= 65) ageDelta = -0.07;
+    else                ageDelta = -0.15 - 0.003 * (age - 65);
+
+    const v = Math.max(0.4,
+      (vTemp + rainDelta + windDelta + daytimeDelta + ageDelta) * urgencyMult
+    );
+
+    document.getElementById('res-ms').textContent   = v.toFixed(2);
+    document.getElementById('res-kmh').textContent  = (v * 3.6).toFixed(1);
     document.getElementById('res-100m').textContent = fmtTime(100 / v);
     document.getElementById('res-1km').textContent  = fmtTime(1000 / v);
 
+    // Faktorbalken — absolut in m/s
     const factors = [
-      { name: 'Temperatur', v: fT },
-      { name: 'Niederschlag', v: fR },
-      { name: 'Wind', v: fW },
-      { name: 'Tageszeit', v: fZ },
-      { name: 'Eile', v: fE },
-      { name: 'Alter', v: fA },
+      { name: 'Temperatur',  delta: vTemp - 1.34,  note: `${vTemp.toFixed(3)} m/s (Gupta-Kurve)` },
+      { name: 'Niederschlag', delta: rainDelta,      note: rain===3 ? '−0.102 m/s (Liang 2020)' : '' },
+      { name: 'Wind',         delta: windDelta,      note: '' },
+      { name: 'Tageszeit',    delta: daytimeDelta,   note: '' },
+      { name: 'Alter',        delta: ageDelta,       note: '' },
+      { name: 'Eile',         delta: v - (vTemp + rainDelta + windDelta + daytimeDelta + ageDelta), note: urgency===2?'×1.17':'×1.00' },
     ];
 
+    const maxAbs = 0.25;
     document.getElementById('factors').innerHTML = factors.map(f => {
-      const pct = Math.abs(f.v) * 100;
-      const color = f.v >= 0 ? '#2d6a4f' : '#b5451b';
-      const sign = f.v > 0 ? '+' : '';
+      const pct = Math.min(Math.abs(f.delta) / maxAbs * 100, 100);
+      const color = f.delta >= 0 ? '#2d6a4f' : '#b5451b';
+      const sign = f.delta > 0 ? '+' : '';
       return `<div class="factor-row">
         <span class="factor-name">${f.name}</span>
-        <div class="bar-bg"><div class="bar-fill" style="width:${Math.min(pct * 5, 100)}%;background:${color}"></div></div>
-        <span class="factor-pct" style="color:${color}">${sign}${Math.round(f.v * 100)} %</span>
+        <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
+        <span class="factor-pct" style="color:${color}">${sign}${f.delta.toFixed(3)} m/s</span>
       </div>`;
     }).join('');
 
-    const fmtF = f => (f >= 0 ? '+' : '') + f.toFixed(3);
+    // Formel
+    const vBase = vTemp + rainDelta + windDelta + daytimeDelta + ageDelta;
     document.getElementById('formula-display').innerHTML =
-      `<span class="base">v = 1.34 × (1 ${fmtF(fT)} ${fmtF(fR)} ${fmtF(fW)} ${fmtF(fZ)} ${fmtF(fE)} ${fmtF(fA)})</span><br>` +
-      `<span class="base">  = <strong style="color:var(--accent)">${v.toFixed(3)} m/s</strong></span>`;
+      `<span style="color:var(--text-muted)">v_temp  = ${vTemp.toFixed(3)} m/s  (Gupta-Kurve bei ${temp} °C)</span><br>` +
+      `<span style="color:var(--text-muted)">+ Regen = ${fmtDelta(rainDelta)} m/s</span><br>` +
+      `<span style="color:var(--text-muted)">+ Wind  = ${fmtDelta(windDelta)} m/s</span><br>` +
+      `<span style="color:var(--text-muted)">+ Zeit  = ${fmtDelta(daytimeDelta)} m/s</span><br>` +
+      `<span style="color:var(--text-muted)">+ Alter = ${fmtDelta(ageDelta)} m/s</span><br>` +
+      `<span style="color:var(--text-muted)">———————————————</span><br>` +
+      `<span style="color:var(--text-muted)">Subtotal= ${vBase.toFixed(3)} m/s  × Eile-Faktor (${urgencyMult.toFixed(2)})</span><br>` +
+      `<span style="color:var(--accent);font-weight:500">= ${v.toFixed(3)} m/s</span>`;
+
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'walking-speed-calculator:update',
+        speedKmh: v * 3.6,
+      }, '*');
+    }
   }
 
   ['temp','wind','age'].forEach(id => {
     const el  = document.getElementById(id);
     const out = document.getElementById(id + '-out');
     el.addEventListener('input', () => {
-      if (id === 'temp')  out.textContent = el.value + ' °C';
-      if (id === 'wind')  out.textContent = el.value + ' km/h';
-      if (id === 'age')   out.textContent = el.value + ' J.';
+      if (id === 'temp') out.textContent = el.value + ' °C';
+      if (id === 'wind') out.textContent = el.value + ' km/h';
+      if (id === 'age')  out.textContent = el.value + ' J.';
       calcSpeed();
     });
   });

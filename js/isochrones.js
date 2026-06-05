@@ -11,7 +11,7 @@ class IsochroneService {
      * Generates an isochrone based on a starting point and distance
      * Following exactly the example provided in the documentation
      */
-    async getDistanceIsochrone(point, profile, distanceKm, useRoadsOnly) {
+    async getDistanceIsochrone(point, profile, distanceKm) {
         return new Promise((resolve, reject) => {
             try {
                 console.log(`Creating isochrone for ${profile} with distance ${distanceKm}km`);
@@ -87,7 +87,7 @@ class IsochroneService {
     /**
      * Generates a search area based on the selected transportation mode
      */
-    async generateSearchArea(center, speed, timeMinutes, mode, useRoadsOnly) {
+    async generateSearchArea(center, speed, timeMinutes, mode) {
         try {
             // Calculate distance based on speed and time
             const timeHours = timeMinutes / 60;
@@ -97,43 +97,25 @@ class IsochroneService {
             
             // Map UI modes to API profiles
             let profile;
-            
-            if (useRoadsOnly) {
-                // Roads only mode
-                switch (mode) {
-                    case 'walking':
-                        profile = 'foot-walking';
-                        break;
-                    case 'biking':
-                        profile = 'cycling-regular';
-                        break;
-                    case 'driving':
-                        profile = 'driving-car';
-                        break;
-                    default:
-                        profile = 'foot-walking';
-                }
-            } else {
-                // Cross-country mode
-                switch (mode) {
-                    case 'walking':
-                        profile = 'foot-walking';
-                        break;
-                    case 'biking':
-                        profile = 'cycling-mountain';
-                        break;
-                    case 'driving':
-                        profile = 'driving-car';
-                        break;
-                    default:
-                        profile = 'foot-walking';
-                }
+
+            switch (mode) {
+                case 'walking':
+                    profile = 'foot-walking';
+                    break;
+                case 'biking':
+                    profile = 'cycling-regular';
+                    break;
+                case 'driving':
+                    profile = 'driving-car';
+                    break;
+                default:
+                    profile = 'foot-walking';
             }
             
-            console.log(`Using profile: ${profile}, distance: ${distanceKm.toFixed(2)}km, useRoadsOnly: ${useRoadsOnly}`);
+            console.log(`Using profile: ${profile}, distance: ${distanceKm.toFixed(2)}km`);
             
             // Generate isochrone
-            return await this.getDistanceIsochrone(center, profile, distanceKm, useRoadsOnly);
+            return await this.getDistanceIsochrone(center, profile, distanceKm);
         } catch (error) {
             console.error("Failed to generate search area:", error);
             // Create a fallback circle
