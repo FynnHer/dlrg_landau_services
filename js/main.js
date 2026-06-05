@@ -90,6 +90,64 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById(mode).classList.add('active');
     }
     
+    // Cookie functionality for saving map position
+    const MAP_POSITION_COOKIE_NAME = 'dlrg_landau_map_position';
+    const COOKIE_EXPIRY_DAYS = 365; // 1 year
+
+    // Save current map position to cookie
+    function saveMapPosition() {
+        const position = {
+            lat: map.getCenter().lat,
+            lng: map.getCenter().lng,
+            zoom: map.getZoom(),
+            mapType: activeMapType
+        };
+
+        // Create cookie string
+        const cookieValue = encodeURIComponent(JSON.stringify(position));
+        const expires = new Date(Date.now() + COOKIE_EXPIRY_DAYS * 24 * 60 * 60 * 1000).toUTCString();
+        document.cookie = `${MAP_POSITION_COOKIE_NAME}=${cookieValue}; expires=${expires}; path=/; SameSite=Lax`;
+    }
+
+    // Load map position from cookie
+    function loadMapPosition() {
+        const name = `${MAP_POSITION_COOKIE_NAME}=`;
+        const cookieValue = document.cookie.split('; ').find(row => row.startsWith(name));
+
+        if (cookieValue) {
+            try {
+                const rawValue = cookieValue.slice(name.length);
+                const position = JSON.parse(decodeURIComponent(rawValue));
+
+                if (map) {
+                    map.setView([position.lat, position.lng], position.zoom);
+
+                    // Restore map type if different
+                    if (position.mapType && position.mapType !== activeMapType) {
+                        changeMapType(position.mapType);
+                    }
+                }
+
+                return true; // Position was loaded
+            } catch (error) {
+                console.error('Error loading saved map position:', error);
+                clearSavedPosition();
+            }
+        }
+
+        return false; // No valid position found
+    }
+
+    // Clear saved map position
+    function clearSavedPosition() {
+        document.cookie = `${MAP_POSITION_COOKIE_NAME}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+    }
+
+    // Export functions for global use
+    window.saveMapPosition = saveMapPosition;
+    window.loadMapPosition = loadMapPosition;
+    window.clearSavedMapPosition = clearSavedPosition;
+
     // Add collapsible advanced options section
     const advancedOptionsSection = document.createElement('div');
     advancedOptionsSection.className = 'collapsible-section';
@@ -107,11 +165,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 <button id="open-calculator-btn" class="btn btn-secondary calculator-launch-btn" type="button">Gehgeschwindigkeit-Rechner öffnen</button>
                 <p class="option-description">Öffnet den Rechner in einem Popup, damit das Panel übersichtlich bleibt.</p>
             </div>
+            <div class="option-group">
+                <button id="save-location-btn" class="btn btn-secondary" type="button">Aktuelle Position speichern</button>
+                <p class="option-description">Speichert die aktuelle Kartenposition. Beim nächsten Besuch wird automatisch an dieser Position geladen.</p>
+                <button id="clear-location-btn" class="btn btn-secondary" type="button">Speicherung löschen</button>
+                <p class="option-description" >Entfernt die gespeicherte Position.</p>
+            </div>
         </div>
     `;
-    
+
     // Insert after transport modes
     document.querySelector('.transport-modes').parentNode.after(advancedOptionsSection);
+
+    // Start collapsed by default
+    const advancedOptionsContent = document.getElementById('advanced-options-content');
+    const advancedOptionsIcon = document.querySelector('#advanced-options-header .toggle-icon');
+    advancedOptionsContent.style.display = 'none';
+    advancedOptionsIcon.textContent = '►';
     
     // Toggle collapsible section
     document.getElementById('advanced-options-header').addEventListener('click', function() {
@@ -214,10 +284,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Consider obstacles button handler
     const obstaclesBtn = document.getElementById('consider-obstacles');
     let obstaclesEnabled = true; // Default to enabled
-    
+
     obstaclesBtn.addEventListener('click', function() {
         obstaclesEnabled = !obstaclesEnabled;
-        
+
         if (obstaclesEnabled) {
             this.classList.add('btn-active');
             this.textContent = 'Hindernisse werden berücksichtigt';
@@ -226,6 +296,77 @@ document.addEventListener('DOMContentLoaded', function() {
             this.textContent = 'Hindernisse berücksichtigen';
         }
     });
+
+    // Save location button handler
+    const saveLocationBtn = document.getElementById('save-location-btn');
+    saveLocationBtn.addEventListener('click', function() {
+        if (!map) {
+            alert('Karte wird noch initialisiert...');
+            return;
+        }
+
+        // Save current position
+        saveMapPosition();
+
+        // Visual feedback
+        this.textContent = 'Position gespeichert ✓';
+        this.classList.add('btn-active');
+
+        setTimeout(() => {
+            this.textContent = 'Aktuelle Position speichern';
+            this.classList.remove('btn-active');
+        }, 2000);
+    });
+
+    // Clear location button handler
+    const clearLocationBtn = document.getElementById('clear-location-btn');
+    clearLocationBtn.addEventListener('click', function() {
+        if (!map) {
+            alert('Karte wird noch initialisiert...');
+            return;
+        }
+
+        // Clear saved position
+        clearSavedPosition();
+
+        // Visual feedback
+        this.textContent = 'Speicherung gelöscht ✓';
+        this.classList.add('btn-active');
+
+        setTimeout(() => {
+            this.textContent = 'Speicherung löschen';
+            this.classList.remove('btn-active');
+        }, 2000);
+    });
+
+    // Save position when user clicks on map
+    if (map) {
+        map.on('click', function() {
+            // Auto-save position after a few seconds of no interaction
+            setTimeout(saveMapPosition, 5000);
+        });
+    }
+
+    // Save position when user navigates (drag, zoom, etc.)
+    if (map) {
+        const savePositionsAfterDelay = {};
+
+        ['movestorender', 'zoomend', 'dragend'].forEach(event => {
+            map.on(event, function() {
+                if (!savePositionsAfterDelay[event]) {
+                    savePositionsAfterDelay[event] = setTimeout(saveMapPosition, 1000);
+                }
+            });
+
+            // Clear delay when user interacts again
+            map.on(event, function() {
+                if (savePositionsAfterDelay[event]) {
+                    clearTimeout(savePositionsAfterDelay[event]);
+                    savePositionsAfterDelay[event] = null;
+                }
+            });
+        });
+    }
     
     // Calculate radius button
     calculateBtn.addEventListener('click', async function() {
@@ -301,7 +442,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         weight: 3,
                         fillColor: color,
                         fillOpacity: 0.2,
-                        dashArray: useRoadsOnly ? '5, 5' : ''  // Dashed line for "Roads Only"
+                        dashArray: ''  // Dashed line for "Roads Only"
                     }
                 }).addTo(map);
                 

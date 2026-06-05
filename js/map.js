@@ -3,6 +3,7 @@ let markers = [];
 let circles = [];
 let selectedPoint = null;
 let currentMapLayer;
+let activeMapType = 'standard';
 
 // Define map layers
 const mapLayers = {
@@ -36,6 +37,11 @@ function initMap() {
 
     // Add click event listener
     map.on('click', onMapClick);
+
+    // Restore saved map position after the map exists
+    if (typeof loadMapPosition === 'function') {
+        loadMapPosition();
+    }
 }
 
 function changeMapType(type) {
@@ -55,6 +61,8 @@ function changeMapType(type) {
         default:
             currentMapLayer = mapLayers.standard;
     }
+
+    activeMapType = type;
 
     currentMapLayer.addTo(map);
 }

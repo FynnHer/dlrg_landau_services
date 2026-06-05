@@ -1,60 +1,79 @@
 # Travel Radius Map
 
-This project is a web application that allows users to visualize travel distances on a map based on selected transportation modes, speed, and time. Users can select a point on the map and draw circles representing the maximum area that can be traveled within a specified time.
+Eine webbasierte Karte zur Visualisierung von Suchradien und Lauf-/Fahrzeiten. Nutzer wählen einen Punkt auf der Karte, definieren Geschwindigkeit und Zeit und erhalten daraus einen Radius bzw. eine Isodistanz auf der Karte.
+
+## Changelog
+
+### 05.06.2026
+- Cookie zur Speicherung der aktuellen Kartenposition
+- Geschwindigkeitsberechnung über Parameter im Popup-Rechner
+- UI aufgeräumt und verbessert
+
+## Was neu ist
+
+- Kartenposition bleibt beim nächsten Besuch erhalten
+- Gehgeschwindigkeit kann in einem Popup berechnet und direkt ins Geschwindigkeitsfeld übernommen werden
+- Erweiterte Optionen sind kompakter und übersichtlicher aufgebaut
+- POIs, KML-Export und Kreisverwaltung sind weiterhin integriert
+
+## Funktionsweise
+
+1. Du klickst auf die Karte und setzt damit den Mittelpunkt für die Berechnung.
+2. Danach wählst du Fortbewegungsart, Geschwindigkeit und Zeit.
+3. Beim Klick auf „Radius berechnen“ wird aus den Eingaben ein Suchradius berechnet.
+4. Falls Hindernisse berücksichtigt werden, wird eine Isochrone über die OpenRouteService-API erzeugt.
+5. Wenn die API keine verwertbare Antwort liefert, wird automatisch ein Fallback-Kreis erzeugt.
+6. Die aktuelle Kartenposition kann gespeichert werden und wird beim nächsten Laden automatisch wiederhergestellt.
+7. Der Gehgeschwindigkeit-Rechner öffnet sich in einem Popup und kann den berechneten km/h-Wert direkt in das Hauptformular übernehmen.
 
 ## Features
 
-- Full-screen interactive map
-- Select a point on the map
-- Input speed (in km/h) or select a mode of transportation (walking, biking, driving)
-- Enter a time to calculate the travel radius
-- Draw multiple circles with different travel statistics
-- Highlight streets for better visualization
+- Vollbild-Interaktive Karte mit Leaflet
+- Kartenposition per Cookie speicherbar
+- Punkt auf der Karte auswählen
+- Geschwindigkeit manuell eingeben oder per Modus wählen
+- Zeit für die Berechnung definieren
+- Mehrere Kreise speichern und löschen
+- POIs im letzten Kreis anzeigen
+- KML-Export für Suchbereiche
+- Popup-Rechner für Gehgeschwindigkeit
 
-## Project Structure
+## Projektstruktur
 
 ```
-travel-radius-map
-├── src
-│   ├── index.html        # Main HTML document
-│   ├── css
-│   │   └── styles.css    # Styles for the webpage
-│   ├── js
-│   │   ├── main.js       # Entry point for JavaScript functionality
-│   │   ├── map.js        # Functions for map rendering and manipulation
-│   │   ├── travelCircle.js # Class for managing travel circles
-│   │   └── utils.js      # Utility functions for calculations
-│   └── assets
-│       └── icons
-│           ├── walking.svg # Icon for walking mode
-│           ├── biking.svg  # Icon for biking mode
-│           └── driving.svg # Icon for driving mode
-├── README.md              # Documentation for the project
-└── package.json           # npm configuration file
+dlrg_landau_services
+├── index.html
+├── walking-speed-calculator.html
+├── css
+│   └── styles.css
+├── js
+│   ├── main.js
+│   ├── map.js
+│   ├── utils.js
+│   ├── travelCircle.js
+│   ├── weather.js
+│   ├── isochrones.js
+│   ├── pois.js
+│   └── kmlExport.js
+├── assets
+│   └── icons
+├── README.md
+└── package.json
 ```
 
-## Setup Instructions
+## Starten
 
-1. Clone the repository:
-   ```
-   git clone <repository-url>
-   cd travel-radius-map
-   ```
+1. Projekt öffnen.
+2. `index.html` im Browser starten oder über einen lokalen Server aufrufen.
+3. Einen Punkt auf der Karte setzen und die gewünschte Berechnung starten.
 
-2. Install dependencies:
-   ```
-   npm install
-   ```
+## Hinweise zur Nutzung
 
-3. Open `src/index.html` in a web browser to view the application.
+- Der Standard-Kartenausschnitt startet mit einer allgemeinen Deutschlandansicht.
+- Die erweiterte Optionen-Sektion ist standardmäßig eingeklappt.
+- Der Gehgeschwindigkeit-Rechner dient als Hilfsmittel und schreibt seinen Wert nicht automatisch, sondern erst nach Übernahme ins Formular.
+- Die gespeicherte Kartenposition ist an den Browser gebunden und wird per Cookie abgelegt.
 
-## Usage Guidelines
+## Mitwirken
 
-- Click on the map to select a point.
-- Enter the desired speed or select a mode of transportation.
-- Input the time to calculate the travel radius.
-- The application will draw circles on the map representing the maximum travel area.
-
-## Contributing
-
-Feel free to submit issues or pull requests for improvements or bug fixes.
+Verbesserungen, Fehlerberichte und Vorschläge sind willkommen.
