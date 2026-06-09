@@ -1,7 +1,7 @@
 class IsochroneService {
     constructor() {
         // API endpoint - no trailing slash
-        this.apiUrl = 'https://api.openrouteservice.org/v2/isochrones/';
+        this.apiUrl = 'http://localhost:8080/ors/v2/isochrones/';
         
         // API key - use the exact same one from the example
         this.apiKey = '5b3ce3597851110001cf624859e55459fe6d409fb3727a8b53110187';
@@ -27,7 +27,7 @@ class IsochroneService {
 
                 request.setRequestHeader('Accept', 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8');
                 request.setRequestHeader('Content-Type', 'application/json');
-                request.setRequestHeader('Authorization', this.apiKey);
+                //request.setRequestHeader('Authorization', this.apiKey);
 
                 // Improved response handler that properly resolves the Promise
                 request.onreadystatechange = () => {
